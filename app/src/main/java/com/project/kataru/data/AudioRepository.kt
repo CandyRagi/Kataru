@@ -4,13 +4,47 @@ import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class AudioRepository(private val context: Context) {
 
-    suspend fun getAudioBooks(): List<AudioBook> = withContext(Dispatchers.IO) {
+    private val settingsManager = SettingsManager(context)
+
+    fun getAudioBooks(): List<AudioBook> {
+        val sourceFolderUri = settingsManager.sourceFolderUri
+        return if (sourceFolderUri != null) {
+            scanFolder(sourceFolderUri)
+        } else {
+            scanMediaStore()
+        }
+    }
+
+    private fun scanFolder(treeUri: Uri): List<AudioBook> {
+        val audioBooks = mutableListOf<AudioBook>()
+        val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return emptyList()
+
+        if (documentFile.isDirectory) {
+            documentFile.listFiles().forEach { file ->
+                if (file.isFile && file.name?.endsWith(".mp3", ignoreCase = true) == true) {
+                    audioBooks.add(
+                        AudioBook(
+                            id = file.uri.toString().hashCode().toString(),
+                            title = file.name ?: "Unknown Title",
+                            author = "Unknown Author", // DocumentFile doesn't easily give metadata without extra work
+                            uri = file.uri,
+                            duration = 0L, // Metadata extraction would require MediaMetadataRetriever
+                            albumArtUri = Uri.EMPTY // No album art from file system scan easily
+                        )
+                    )
+                }
+            }
+        }
+        return audioBooks
+    }
+
+    private fun scanMediaStore(): List<AudioBook> {
         val audioBooks = mutableListOf<AudioBook>()
         val collection = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -26,18 +60,14 @@ class AudioRepository(private val context: Context) {
             MediaStore.Audio.Media.ALBUM_ID
         )
 
-        // Filter for MP3 files and potentially specific folders if needed later
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.MIME_TYPE} = ?"
-        val selectionArgs = arrayOf("audio/mpeg")
-
-        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
 
         context.contentResolver.query(
             collection,
             projection,
             selection,
-            selectionArgs,
-            sortOrder
+            null,
+            "${MediaStore.Audio.Media.TITLE} ASC"
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
@@ -66,7 +96,7 @@ class AudioRepository(private val context: Context) {
                     AudioBook(
                         id = id.toString(),
                         title = title,
-                        author = artist ?: "Unknown Author",
+                        author = artist,
                         uri = contentUri,
                         duration = duration,
                         albumArtUri = albumArtUri
@@ -74,6 +104,6 @@ class AudioRepository(private val context: Context) {
                 )
             }
         }
-        return@withContext audioBooks
+        return audioBooks
     }
 }

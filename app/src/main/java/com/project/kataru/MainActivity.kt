@@ -15,6 +15,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -34,13 +35,25 @@ import androidx.core.content.ContextCompat
 import com.project.kataru.ui.LibraryScreen
 import com.project.kataru.ui.MainViewModel
 import com.project.kataru.ui.PlayerScreen
+import com.project.kataru.ui.SettingsScreen
 import com.project.kataru.ui.theme.KataruTheme
+
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable full screen and hide system bars
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+
         setContent {
             KataruTheme {
                 Surface(
@@ -54,6 +67,7 @@ class MainActivity : ComponentActivity() {
                         val isPlaying by viewModel.isPlaying.collectAsState()
                         
                         var showPlayer by remember { mutableStateOf(false) }
+                        var showSettings by remember { mutableStateOf(false) }
 
                         // Auto-show player if a book is selected (and we aren't already there)
                         LaunchedEffect(currentBook) {
@@ -62,37 +76,49 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        BackHandler(enabled = showPlayer) {
-                            showPlayer = false
+                        BackHandler(enabled = showPlayer || showSettings) {
+                            if (showSettings) {
+                                showSettings = false
+                            } else {
+                                showPlayer = false
+                            }
                         }
 
                         AnimatedContent(
-                            targetState = showPlayer,
+                            targetState = when {
+                                showSettings -> "Settings"
+                                showPlayer -> "Player"
+                                else -> "Library"
+                            },
                             label = "ScreenTransition",
                             transitionSpec = {
-                                if (targetState) {
+                                if (targetState == "Settings" || (initialState == "Library" && targetState == "Player")) {
                                     slideInVertically { height -> height } togetherWith slideOutVertically { height -> -height }
                                 } else {
                                     slideInVertically { height -> -height } togetherWith slideOutVertically { height -> height }
                                 }
                             }
-                        ) { isPlayerVisible ->
-                            if (isPlayerVisible && currentBook != null) {
-                                PlayerScreen(
-                                    book = currentBook!!,
-                                    isPlaying = isPlaying,
-                                    onPlayPauseClick = { viewModel.togglePlayPause() }
-                                )
-                            } else {
-                                if (audioBooks.isEmpty()) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "No Audiobooks found.\nAdd MP3s to your device.",
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            color = MaterialTheme.colorScheme.onBackground
+                        ) { screen ->
+                            when (screen) {
+                                "Settings" -> {
+                                    SettingsScreen(
+                                        onBackClick = { showSettings = false },
+                                        onRescanClick = {
+                                            viewModel.loadAudioBooks()
+                                            showSettings = false
+                                        }
+                                    )
+                                }
+                                "Player" -> {
+                                    if (currentBook != null) {
+                                        PlayerScreen(
+                                            book = currentBook!!,
+                                            isPlaying = isPlaying,
+                                            onPlayPauseClick = { viewModel.togglePlayPause() }
                                         )
                                     }
-                                } else {
+                                }
+                                "Library" -> {
                                     LibraryScreen(
                                         audioBooks = audioBooks,
                                         onBookClick = { book ->
@@ -100,7 +126,7 @@ class MainActivity : ComponentActivity() {
                                             showPlayer = true
                                         },
                                         onRefresh = { viewModel.loadAudioBooks() },
-                                        onSettingsClick = { /* TODO: Implement Settings */ }
+                                        onSettingsClick = { showSettings = true }
                                     )
                                 }
                             }
