@@ -147,6 +147,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playAudioBook(book: AudioBook) {
+        val historyItem = historyManager.getHistory().find { it.id == book.id }
+        val startPosition = historyItem?.position ?: 0L
+
         val mediaItem = MediaItem.Builder()
             .setMediaId(book.id)
             .setUri(book.uri)
@@ -161,8 +164,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         controller?.setMediaItem(mediaItem)
         controller?.prepare()
+        if (startPosition > 0) {
+            controller?.seekTo(startPosition)
+        }
         controller?.play()
         _currentBook.value = book
+        _currentPosition.value = startPosition
     }
 
     fun togglePlayPause() {

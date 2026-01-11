@@ -27,6 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +54,34 @@ fun HistoryScreen(
     onClearHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showClearConfirmation by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (showClearConfirmation) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showClearConfirmation = false },
+            title = { Text("Clear History") },
+            text = { Text("Are you sure you want to clear your playback history? This action cannot be undone.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        onClearHistory()
+                        showClearConfirmation = false
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showClearConfirmation = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         // Header
         Row(
@@ -76,7 +106,7 @@ fun HistoryScreen(
             )
             Spacer(modifier = Modifier.weight(1f))
             if (historyItems.isNotEmpty()) {
-                IconButton(onClick = onClearHistory) {
+                IconButton(onClick = { showClearConfirmation = true }) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Clear History",
