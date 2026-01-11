@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                         
                         var showPlayer by remember { mutableStateOf(false) }
                         var showSettings by remember { mutableStateOf(false) }
+                        var showHistory by remember { mutableStateOf(false) }
 
                         // Auto-show player if a book is selected (and we aren't already there)
                         LaunchedEffect(currentBook) {
@@ -78,9 +79,11 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        BackHandler(enabled = showPlayer || showSettings) {
+                        BackHandler(enabled = showPlayer || showSettings || showHistory) {
                             if (showSettings) {
                                 showSettings = false
+                            } else if (showHistory) {
+                                showHistory = false
                             } else {
                                 showPlayer = false
                             }
@@ -89,6 +92,7 @@ class MainActivity : ComponentActivity() {
                         AnimatedContent(
                             targetState = when {
                                 showSettings -> "Settings"
+                                showHistory -> "History"
                                 showPlayer -> "Player"
                                 else -> "Library"
                             },
@@ -101,6 +105,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                     // Settings -> Library (Slide Right)
                                     initialState == "Settings" && targetState == "Library" -> {
+                                        slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
+                                    }
+                                    // Library -> History (Slide Left)
+                                    initialState == "Library" && targetState == "History" -> {
+                                        slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
+                                    }
+                                    // History -> Library (Slide Right)
+                                    initialState == "History" && targetState == "Library" -> {
                                         slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
                                     }
                                     // Library -> Player (Slide Up)
@@ -122,6 +134,19 @@ class MainActivity : ComponentActivity() {
                                             viewModel.loadAudioBooks()
                                             showSettings = false
                                         }
+                                    )
+                                }
+                                "History" -> {
+                                    val historyItems by viewModel.historyItems.collectAsState()
+                                    com.project.kataru.ui.HistoryScreen(
+                                        historyItems = historyItems,
+                                        onItemClick = { item ->
+                                            viewModel.resumeBook(item)
+                                            showHistory = false
+                                            showPlayer = true
+                                        },
+                                        onBackClick = { showHistory = false },
+                                        onClearHistory = { viewModel.clearHistory() }
                                     )
                                 }
                                 "Player" -> {
@@ -153,7 +178,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onRefresh = { viewModel.loadAudioBooks() },
                                         onSettingsClick = { showSettings = true },
-                                        onHistoryClick = { /* TODO: Implement History */ }
+                                        onHistoryClick = { showHistory = true }
                                     )
                                 }
                             }

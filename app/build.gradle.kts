@@ -70,6 +70,7 @@ dependencies {
     
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.gson)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

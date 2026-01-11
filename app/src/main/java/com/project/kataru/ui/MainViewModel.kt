@@ -43,7 +43,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _duration = MutableStateFlow(0L)
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
+    private val historyManager = com.project.kataru.data.HistoryManager(application)
+
+    private val _historyItems = MutableStateFlow<List<com.project.kataru.data.HistoryItem>>(emptyList())
+    val historyItems: StateFlow<List<com.project.kataru.data.HistoryItem>> = _historyItems.asStateFlow()
+
     init {
+        refreshHistory()
         val sessionToken = SessionToken(application, ComponentName(application, PlaybackService::class.java))
         controllerFuture = MediaController.Builder(application, sessionToken).buildAsync()
         controllerFuture?.addListener({
@@ -52,10 +58,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _isPlaying.value = isPlaying
                     if (isPlaying) {
                         startPositionUpdater()
+                    } else {
+                        saveCurrentProgress()
                     }
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    // Save progress of previous book before switching
+                    saveCurrentProgress()
+                    
                     // Update current book based on media id
                     mediaItem?.mediaId?.let { id ->
                         _currentBook.value = _audioBooks.value.find { it.id == id }
@@ -70,6 +81,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             })
         }, MoreExecutors.directExecutor())
+    }
+
+    private fun refreshHistory() {
+        _historyItems.value = historyManager.getHistory()
+    }
+
+    private fun saveCurrentProgress() {
+        val book = _currentBook.value ?: return
+        val position = _currentPosition.value
+        val duration = _duration.value
+        val item = com.project.kataru.data.HistoryItem(
+            id = book.id,
+            title = book.title,
+            author = book.author,
+            albumArtUri = book.albumArtUri.toString(),
+            uri = book.uri.toString(),
+            duration = duration,
+            position = position,
+            timestamp = System.currentTimeMillis()
+        )
+        historyManager.addToHistory(item)
+        refreshHistory()
+    }
+
+    fun clearHistory() {
+        historyManager.clearHistory()
+        refreshHistory()
+    }
+
+    fun resumeBook(item: com.project.kataru.data.HistoryItem) {
+        val book = AudioBook(
+            id = item.id,
+            title = item.title,
+            author = item.author,
+            albumArtUri = android.net.Uri.parse(item.albumArtUri),
+            uri = android.net.Uri.parse(item.uri),
+            duration = item.duration
+        )
+        
+        playAudioBook(book)
+        seekTo(item.position)
     }
 
     private fun startPositionUpdater() {
@@ -116,6 +168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun togglePlayPause() {
         if (controller?.isPlaying == true) {
             controller?.pause()
+            saveCurrentProgress()
         } else {
             controller?.play()
         }
@@ -143,6 +196,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun skipToNext() {
+        saveCurrentProgress()
         val current = _currentBook.value ?: return
         val list = _audioBooks.value
         val currentIndex = list.indexOfFirst { it.id == current.id }
@@ -152,6 +206,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun skipToPrevious() {
+        saveCurrentProgress()
         val current = _currentBook.value ?: return
         val list = _audioBooks.value
         val currentIndex = list.indexOfFirst { it.id == current.id }
@@ -161,6 +216,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        saveCurrentProgress()
         super.onCleared()
         controllerFuture?.let {
             MediaController.releaseFuture(it)

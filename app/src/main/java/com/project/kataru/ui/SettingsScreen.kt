@@ -52,36 +52,37 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Settings",
-                        modifier = Modifier.padding(top = 4.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Header
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 16.dp, bottom = 16.dp, top = 24.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
+            }
+            Text(
+                text = "Settings",
+                modifier = Modifier.padding(start = 10.dp, top = 6.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = Modifier.padding(top = 12.dp)
-    ) { paddingValues ->
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .padding(16.dp)
         ) {
             Text(
