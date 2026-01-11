@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -52,19 +55,20 @@ fun MiniPlayer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp) // Taller to accommodate progress bar
             .clickable(onClick = onClick),
         color = androidx.compose.ui.graphics.Color(0xFF6750A4), // Purple background
         contentColor = androidx.compose.ui.graphics.Color.White,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         tonalElevation = 8.dp
     ) {
-        Column {
+        Column(
+            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
             Row(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(1f, fill = false)
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Info on the Left
@@ -139,7 +143,7 @@ fun MiniPlayer(
             if (duration > 0) {
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { currentPosition.toFloat() / duration.toFloat() },
-                    modifier = Modifier.fillMaxWidth().height(2.dp),
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
                     color = androidx.compose.ui.graphics.Color(0xFF4285F4), // Blue color
                     trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
                 )

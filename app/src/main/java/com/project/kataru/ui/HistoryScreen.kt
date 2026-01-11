@@ -41,15 +41,14 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.project.kataru.R
-import com.project.kataru.data.HistoryItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun HistoryScreen(
-    historyItems: List<HistoryItem>,
-    onItemClick: (HistoryItem) -> Unit,
+    historyItems: List<com.project.kataru.data.HistoryEntity>,
+    onItemClick: (com.project.kataru.data.HistoryEntity) -> Unit,
     onBackClick: () -> Unit,
     onClearHistory: () -> Unit,
     modifier: Modifier = Modifier
@@ -142,7 +141,7 @@ fun HistoryScreen(
 
 @Composable
 fun HistoryListItem(
-    item: HistoryItem,
+    item: com.project.kataru.data.HistoryEntity,
     onClick: () -> Unit
 ) {
     Card(

@@ -50,8 +50,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val historyManager = com.project.kataru.data.HistoryManager(application)
 
-    private val _historyItems = MutableStateFlow<List<com.project.kataru.data.HistoryItem>>(emptyList())
-    val historyItems: StateFlow<List<com.project.kataru.data.HistoryItem>> = _historyItems.asStateFlow()
+    private val _historyItems = MutableStateFlow<List<com.project.kataru.data.HistoryEntity>>(emptyList())
+    val historyItems: StateFlow<List<com.project.kataru.data.HistoryEntity>> = _historyItems.asStateFlow()
 
     val activeBook: StateFlow<AudioBook?> = kotlinx.coroutines.flow.combine(_currentBook, _historyItems) { current, history ->
         if (current != null) {
@@ -90,7 +90,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     init {
-        refreshHistory()
+        viewModelScope.launch {
+            historyManager.getHistoryFlow().collect { items ->
+                _historyItems.value = items
+            }
+        }
+        
         val sessionToken = SessionToken(application, ComponentName(application, PlaybackService::class.java))
         controllerFuture = MediaController.Builder(application, sessionToken).buildAsync()
         controllerFuture?.addListener({
@@ -124,34 +129,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }, MoreExecutors.directExecutor())
     }
 
-    private fun refreshHistory() {
-        _historyItems.value = historyManager.getHistory()
-    }
-
-    private fun saveCurrentProgress() {
+    fun saveCurrentProgress() {
         val book = _currentBook.value ?: return
         val position = _currentPosition.value
         val duration = _duration.value
-        val item = com.project.kataru.data.HistoryItem(
-            id = book.id,
-            title = book.title,
-            author = book.author,
-            albumArtUri = book.albumArtUri.toString(),
-            uri = book.uri.toString(),
-            duration = duration,
-            position = position,
-            timestamp = System.currentTimeMillis()
-        )
-        historyManager.addToHistory(item)
-        refreshHistory()
+        
+        viewModelScope.launch {
+            val item = com.project.kataru.data.HistoryEntity(
+                id = book.id,
+                title = book.title,
+                author = book.author,
+                albumArtUri = book.albumArtUri.toString(),
+                uri = book.uri.toString(),
+                duration = duration,
+                position = position,
+                timestamp = System.currentTimeMillis()
+            )
+            historyManager.addToHistory(item)
+        }
     }
 
     fun clearHistory() {
-        historyManager.clearHistory()
-        refreshHistory()
+        viewModelScope.launch {
+            historyManager.clearHistory()
+        }
     }
 
-    fun resumeBook(item: com.project.kataru.data.HistoryItem) {
+    fun resumeBook(item: com.project.kataru.data.HistoryEntity) {
         val book = AudioBook(
             id = item.id,
             title = item.title,
@@ -161,14 +165,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             duration = item.duration
         )
         
-        playAudioBook(book)
-        seekTo(item.position)
+        playAudioBook(book, item.position)
     }
 
     private fun startPositionUpdater() {
         viewModelScope.launch {
             while (_isPlaying.value) {
-                _currentPosition.value = controller?.currentPosition ?: 0L
+                val currentPos = controller?.currentPosition
+                if (currentPos != null && currentPos > 0) {
+                    _currentPosition.value = currentPos
+                }
                 kotlinx.coroutines.delay(1000L)
             }
         }
@@ -187,9 +193,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun playAudioBook(book: AudioBook) {
-        val historyItem = historyManager.getHistory().find { it.id == book.id }
-        val startPosition = historyItem?.position ?: 0L
+    fun playAudioBook(book: AudioBook, startPosition: Long? = null) {
+        val finalStartPosition = if (startPosition != null) {
+            startPosition
+        } else {
+            val historyItem = _historyItems.value.find { it.id == book.id }
+            historyItem?.position ?: 0L
+        }
 
         val mediaItem = MediaItem.Builder()
             .setMediaId(book.id)
@@ -203,14 +213,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             .build()
 
-        controller?.setMediaItem(mediaItem)
+        controller?.setMediaItem(mediaItem, finalStartPosition)
         controller?.prepare()
-        if (startPosition > 0) {
-            controller?.seekTo(startPosition)
-        }
         controller?.play()
         _currentBook.value = book
-        _currentPosition.value = startPosition
+        _currentPosition.value = finalStartPosition
     }
 
     fun togglePlayPause() {
