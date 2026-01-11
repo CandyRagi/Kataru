@@ -5,11 +5,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -116,7 +111,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PermissionHandler(onPermissionGranted: () -> Unit) {
+fun PermissionHandler(onPermissionGranted: @Composable () -> Unit) {
     val context = LocalContext.current
     var hasPermission by remember {
         mutableStateOf(
