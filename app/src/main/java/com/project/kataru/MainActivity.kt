@@ -11,7 +11,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
@@ -92,10 +94,23 @@ class MainActivity : ComponentActivity() {
                             },
                             label = "ScreenTransition",
                             transitionSpec = {
-                                if (targetState == "Settings" || (initialState == "Library" && targetState == "Player")) {
-                                    slideInVertically { height -> height } togetherWith slideOutVertically { height -> -height }
-                                } else {
-                                    slideInVertically { height -> -height } togetherWith slideOutVertically { height -> height }
+                                when {
+                                    // Library -> Settings (Slide Left)
+                                    initialState == "Library" && targetState == "Settings" -> {
+                                        slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
+                                    }
+                                    // Settings -> Library (Slide Right)
+                                    initialState == "Settings" && targetState == "Library" -> {
+                                        slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
+                                    }
+                                    // Library -> Player (Slide Up)
+                                    initialState == "Library" && targetState == "Player" -> {
+                                        slideInVertically { height -> height } togetherWith slideOutVertically { height -> -height }
+                                    }
+                                    // Player -> Library (Slide Down)
+                                    else -> {
+                                        slideInVertically { height -> -height } togetherWith slideOutVertically { height -> height }
+                                    }
                                 }
                             }
                         ) { screen ->
