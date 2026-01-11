@@ -169,6 +169,12 @@ class MainActivity : ComponentActivity() {
                                 }
                                 "Library" -> {
                                     val isRefreshing by viewModel.isRefreshing.collectAsState()
+                                    val activeBook by viewModel.activeBook.collectAsState()
+                                    val isPlaying by viewModel.isPlaying.collectAsState()
+                                    val isGridView by viewModel.isGridView.collectAsState()
+                                    val activeBookProgress by viewModel.activeBookProgress.collectAsState()
+                                    val duration by viewModel.duration.collectAsState()
+
                                     LibraryScreen(
                                         audioBooks = audioBooks,
                                         isRefreshing = isRefreshing,
@@ -178,7 +184,40 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onRefresh = { viewModel.loadAudioBooks() },
                                         onSettingsClick = { showSettings = true },
-                                        onHistoryClick = { showHistory = true }
+                                        onHistoryClick = { showHistory = true },
+                                        activeBook = activeBook,
+                                        isPlaying = isPlaying,
+                                        currentPosition = activeBookProgress,
+                                        duration = if (activeBook?.id == viewModel.currentBook.value?.id) duration else activeBook?.duration ?: 0L,
+                                        isGridView = isGridView,
+                                        onToggleView = { viewModel.toggleViewMode() },
+                                        onPlayPause = {
+                                            if (activeBook != null && viewModel.currentBook.value == null) {
+                                                // Resume from history if not currently playing
+                                                val historyItem = viewModel.historyItems.value.find { it.id == activeBook!!.id }
+                                                if (historyItem != null) {
+                                                    viewModel.resumeBook(historyItem)
+                                                } else {
+                                                    viewModel.playAudioBook(activeBook!!)
+                                                }
+                                            } else {
+                                                viewModel.togglePlayPause()
+                                            }
+                                        },
+                                        onNext = { viewModel.skipToNext() },
+                                        onPrev = { viewModel.skipToPrevious() },
+                                        onMiniPlayerClick = {
+                                             if (activeBook != null && viewModel.currentBook.value == null) {
+                                                // Resume from history if not currently playing
+                                                val historyItem = viewModel.historyItems.value.find { it.id == activeBook!!.id }
+                                                if (historyItem != null) {
+                                                    viewModel.resumeBook(historyItem)
+                                                } else {
+                                                    viewModel.playAudioBook(activeBook!!)
+                                                }
+                                            }
+                                            showPlayer = true 
+                                        }
                                     )
                                 }
                             }

@@ -64,9 +64,18 @@ fun LibraryScreen(
     onRefresh: () -> Unit,
     onSettingsClick: () -> Unit,
     onHistoryClick: () -> Unit,
+    activeBook: AudioBook?,
+    isPlaying: Boolean,
+    currentPosition: Long,
+    duration: Long,
+    isGridView: Boolean,
+    onToggleView: () -> Unit,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onPrev: () -> Unit,
+    onMiniPlayerClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isGridView by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredBooks = remember(audioBooks, searchQuery) {
@@ -103,7 +112,7 @@ fun LibraryScreen(
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
-            IconButton(onClick = { isGridView = !isGridView }) {
+            IconButton(onClick = onToggleView) {
                 Icon(
                     imageVector = if (isGridView) Icons.Default.ViewList else Icons.Default.GridView,
                     contentDescription = "Toggle View",
@@ -208,6 +217,20 @@ fun LibraryScreen(
                     }
                 }
             }
+        }
+
+
+        if (activeBook != null) {
+            MiniPlayer(
+                book = activeBook,
+                isPlaying = isPlaying,
+                currentPosition = currentPosition,
+                duration = duration,
+                onPlayPauseClick = onPlayPause,
+                onNextClick = onNext,
+                onPrevClick = onPrev,
+                onClick = onMiniPlayerClick
+            )
         }
     }
 }

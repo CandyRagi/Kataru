@@ -16,6 +16,7 @@ import com.project.kataru.service.PlaybackService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -37,6 +38,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val sharedPreferences = application.getSharedPreferences("kataru_prefs", android.content.Context.MODE_PRIVATE)
+    private val _isGridView = MutableStateFlow(sharedPreferences.getBoolean("is_grid_view", true))
+    val isGridView: StateFlow<Boolean> = _isGridView.asStateFlow()
+
     private val _currentPosition = MutableStateFlow(0L)
     val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
 
@@ -47,6 +52,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _historyItems = MutableStateFlow<List<com.project.kataru.data.HistoryItem>>(emptyList())
     val historyItems: StateFlow<List<com.project.kataru.data.HistoryItem>> = _historyItems.asStateFlow()
+
+    val activeBook: StateFlow<AudioBook?> = kotlinx.coroutines.flow.combine(_currentBook, _historyItems) { current, history ->
+        if (current != null) {
+            current
+        } else if (history.isNotEmpty()) {
+            val item = history.first()
+            AudioBook(
+                id = item.id,
+                title = item.title,
+                author = item.author,
+                albumArtUri = android.net.Uri.parse(item.albumArtUri),
+                uri = android.net.Uri.parse(item.uri),
+                duration = item.duration
+            )
+        } else {
+            null
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    val activeBookProgress: StateFlow<Long> = kotlinx.coroutines.flow.combine(_currentBook, _currentPosition, _historyItems) { current, currentPos, history ->
+        if (current != null) {
+            currentPos
+        } else if (history.isNotEmpty()) {
+            history.first().position
+        } else {
+            0L
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        initialValue = 0L
+    )
 
     init {
         refreshHistory()
@@ -220,6 +261,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (currentIndex > 0) {
             playAudioBook(list[currentIndex - 1])
         }
+    }
+
+    fun toggleViewMode() {
+        val newValue = !_isGridView.value
+        _isGridView.value = newValue
+        sharedPreferences.edit().putBoolean("is_grid_view", newValue).apply()
     }
 
     override fun onCleared() {
