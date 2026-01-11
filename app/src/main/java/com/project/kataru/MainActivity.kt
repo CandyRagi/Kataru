@@ -98,7 +98,9 @@ class MainActivity : ComponentActivity() {
                                         onBookClick = { book ->
                                             viewModel.playAudioBook(book)
                                             showPlayer = true
-                                        }
+                                        },
+                                        onRefresh = { viewModel.loadAudioBooks() },
+                                        onSettingsClick = { /* TODO: Implement Settings */ }
                                     )
                                 }
                             }
