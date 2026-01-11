@@ -11,10 +11,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -34,13 +37,25 @@ import androidx.core.content.ContextCompat
 import com.project.kataru.ui.LibraryScreen
 import com.project.kataru.ui.MainViewModel
 import com.project.kataru.ui.PlayerScreen
+import com.project.kataru.ui.SettingsScreen
 import com.project.kataru.ui.theme.KataruTheme
+
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable full screen and hide system bars
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+
         setContent {
             KataruTheme {
                 Surface(
@@ -54,6 +69,8 @@ class MainActivity : ComponentActivity() {
                         val isPlaying by viewModel.isPlaying.collectAsState()
                         
                         var showPlayer by remember { mutableStateOf(false) }
+                        var showSettings by remember { mutableStateOf(false) }
+                        var showHistory by remember { mutableStateOf(false) }
 
                         // Auto-show player if a book is selected (and we aren't already there)
                         LaunchedEffect(currentBook) {
@@ -62,43 +79,106 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        BackHandler(enabled = showPlayer) {
-                            showPlayer = false
+                        BackHandler(enabled = showPlayer || showSettings || showHistory) {
+                            if (showSettings) {
+                                showSettings = false
+                            } else if (showHistory) {
+                                showHistory = false
+                            } else {
+                                showPlayer = false
+                            }
                         }
 
                         AnimatedContent(
-                            targetState = showPlayer,
+                            targetState = when {
+                                showSettings -> "Settings"
+                                showHistory -> "History"
+                                showPlayer -> "Player"
+                                else -> "Library"
+                            },
                             label = "ScreenTransition",
                             transitionSpec = {
-                                if (targetState) {
-                                    slideInVertically { height -> height } togetherWith slideOutVertically { height -> -height }
-                                } else {
-                                    slideInVertically { height -> -height } togetherWith slideOutVertically { height -> height }
+                                when {
+                                    // Library -> Settings (Slide Left)
+                                    initialState == "Library" && targetState == "Settings" -> {
+                                        slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
+                                    }
+                                    // Settings -> Library (Slide Right)
+                                    initialState == "Settings" && targetState == "Library" -> {
+                                        slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
+                                    }
+                                    // Library -> History (Slide Left)
+                                    initialState == "Library" && targetState == "History" -> {
+                                        slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
+                                    }
+                                    // History -> Library (Slide Right)
+                                    initialState == "History" && targetState == "Library" -> {
+                                        slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
+                                    }
+                                    // Library -> Player (Slide Up)
+                                    initialState == "Library" && targetState == "Player" -> {
+                                        slideInVertically { height -> height } togetherWith slideOutVertically { height -> -height }
+                                    }
+                                    // Player -> Library (Slide Down)
+                                    else -> {
+                                        slideInVertically { height -> -height } togetherWith slideOutVertically { height -> height }
+                                    }
                                 }
                             }
-                        ) { isPlayerVisible ->
-                            if (isPlayerVisible && currentBook != null) {
-                                PlayerScreen(
-                                    book = currentBook!!,
-                                    isPlaying = isPlaying,
-                                    onPlayPauseClick = { viewModel.togglePlayPause() }
-                                )
-                            } else {
-                                if (audioBooks.isEmpty()) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "No Audiobooks found.\nAdd MP3s to your device.",
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            color = MaterialTheme.colorScheme.onBackground
+                        ) { screen ->
+                            when (screen) {
+                                "Settings" -> {
+                                    SettingsScreen(
+                                        onBackClick = { showSettings = false },
+                                        onRescanClick = {
+                                            viewModel.loadAudioBooks()
+                                            showSettings = false
+                                        }
+                                    )
+                                }
+                                "History" -> {
+                                    val historyItems by viewModel.historyItems.collectAsState()
+                                    com.project.kataru.ui.HistoryScreen(
+                                        historyItems = historyItems,
+                                        onItemClick = { item ->
+                                            viewModel.resumeBook(item)
+                                            showHistory = false
+                                            showPlayer = true
+                                        },
+                                        onBackClick = { showHistory = false },
+                                        onClearHistory = { viewModel.clearHistory() }
+                                    )
+                                }
+                                "Player" -> {
+                                    if (currentBook != null) {
+                                        val currentPosition by viewModel.currentPosition.collectAsState()
+                                        val duration by viewModel.duration.collectAsState()
+                                        PlayerScreen(
+                                            book = currentBook!!,
+                                            isPlaying = isPlaying,
+                                            currentPosition = currentPosition,
+                                            duration = duration,
+                                            onPlayPauseClick = { viewModel.togglePlayPause() },
+                                            onSeek = { viewModel.seekTo(it) },
+                                            onSkipForward = { viewModel.skipForward() },
+                                            onSkipBackward = { viewModel.skipBackward() },
+                                            onSkipNext = { viewModel.skipToNext() },
+                                            onSkipPrevious = { viewModel.skipToPrevious() }
                                         )
                                     }
-                                } else {
+                                }
+                                "Library" -> {
+                                    val isRefreshing by viewModel.isRefreshing.collectAsState()
                                     LibraryScreen(
                                         audioBooks = audioBooks,
+                                        isRefreshing = isRefreshing,
                                         onBookClick = { book ->
                                             viewModel.playAudioBook(book)
                                             showPlayer = true
-                                        }
+                                        },
+                                        onRefresh = { viewModel.loadAudioBooks() },
+                                        onSettingsClick = { showSettings = true },
+                                        onHistoryClick = { showHistory = true }
                                     )
                                 }
                             }

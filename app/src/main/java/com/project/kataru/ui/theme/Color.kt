@@ -11,7 +11,7 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // Custom "Amazing" Colors
-val DeepBlue = Color(0xFF121212)
+val DeepBlue = Color(0xFF000000)
 val SurfaceDark = Color(0xFF1E1E1E)
 val AccentColor = Color(0xFF00E5FF) // Cyan Accent
 val TextPrimary = Color(0xFFFFFFFF)
