@@ -20,10 +20,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.Card
@@ -51,15 +55,30 @@ import coil.request.ImageRequest
 import com.project.kataru.R
 import com.project.kataru.data.AudioBook
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     audioBooks: List<AudioBook>,
+    isRefreshing: Boolean,
     onBookClick: (AudioBook) -> Unit,
     onRefresh: () -> Unit,
     onSettingsClick: () -> Unit,
+    onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isGridView by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredBooks = remember(audioBooks, searchQuery) {
+        if (searchQuery.isBlank()) {
+            audioBooks
+        } else {
+            audioBooks.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                it.author.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         // Header
@@ -77,10 +96,10 @@ fun LibraryScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = onRefresh) {
+            IconButton(onClick = onHistoryClick) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
+                    imageVector = Icons.Default.History,
+                    contentDescription = "History",
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -100,45 +119,93 @@ fun LibraryScreen(
             }
         }
 
-        if (audioBooks.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Search Bar
+        androidx.compose.material3.OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { Text("Search library...") },
+            leadingIcon = {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Search,
+                    contentDescription = "Search"
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Clear,
+                            contentDescription = "Clear"
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = CircleShape,
+            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
+            )
+        )
+
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.weight(1f)
+        ) {
+            if (audioBooks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "No Audiobooks found.\nAdd MP3s to your device.",
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        androidx.compose.material3.Button(onClick = onSettingsClick) {
+                            Text("Select Source Folder")
+                        }
+                    }
+                }
+            } else if (filteredBooks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "No Audiobooks found.\nAdd MP3s to your device.",
+                        text = "No results found for \"$searchQuery\"",
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    androidx.compose.material3.Button(onClick = onSettingsClick) {
-                        Text("Select Source Folder")
+                }
+            } else if (isGridView) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(filteredBooks) { book ->
+                        AudioBookGridItem(book = book, onClick = { onBookClick(book) })
                     }
                 }
-            }
-        } else if (isGridView) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(audioBooks) { book ->
-                    AudioBookGridItem(book = book, onClick = { onBookClick(book) })
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(audioBooks) { book ->
-                    AudioBookItem(book = book, onClick = { onBookClick(book) })
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredBooks) { book ->
+                        AudioBookItem(book = book, onClick = { onBookClick(book) })
+                    }
                 }
             }
         }

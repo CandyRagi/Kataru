@@ -126,22 +126,34 @@ class MainActivity : ComponentActivity() {
                                 }
                                 "Player" -> {
                                     if (currentBook != null) {
+                                        val currentPosition by viewModel.currentPosition.collectAsState()
+                                        val duration by viewModel.duration.collectAsState()
                                         PlayerScreen(
                                             book = currentBook!!,
                                             isPlaying = isPlaying,
-                                            onPlayPauseClick = { viewModel.togglePlayPause() }
+                                            currentPosition = currentPosition,
+                                            duration = duration,
+                                            onPlayPauseClick = { viewModel.togglePlayPause() },
+                                            onSeek = { viewModel.seekTo(it) },
+                                            onSkipForward = { viewModel.skipForward() },
+                                            onSkipBackward = { viewModel.skipBackward() },
+                                            onSkipNext = { viewModel.skipToNext() },
+                                            onSkipPrevious = { viewModel.skipToPrevious() }
                                         )
                                     }
                                 }
                                 "Library" -> {
+                                    val isRefreshing by viewModel.isRefreshing.collectAsState()
                                     LibraryScreen(
                                         audioBooks = audioBooks,
+                                        isRefreshing = isRefreshing,
                                         onBookClick = { book ->
                                             viewModel.playAudioBook(book)
                                             showPlayer = true
                                         },
                                         onRefresh = { viewModel.loadAudioBooks() },
-                                        onSettingsClick = { showSettings = true }
+                                        onSettingsClick = { showSettings = true },
+                                        onHistoryClick = { /* TODO: Implement History */ }
                                     )
                                 }
                             }
