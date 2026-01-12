@@ -188,7 +188,9 @@ fun LibraryScreen(
             androidx.compose.material3.OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, CircleShape),
                 placeholder = { 
                     Text(
                         "Search your library...",
@@ -214,13 +216,13 @@ fun LibraryScreen(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(20.dp),
+                shape = CircleShape,
                 colors = androidx.compose.material3.TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceGlass.copy(alpha = 0.8f),
-                    unfocusedContainerColor = SurfaceCard.copy(alpha = 0.6f),
-                    disabledContainerColor = SurfaceCard,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    unfocusedIndicatorColor = CardBorder,
+                    focusedContainerColor = SurfaceGlass.copy(alpha = 0.9f),
+                    unfocusedContainerColor = SurfaceGlass.copy(alpha = 0.6f),
+                    disabledContainerColor = SurfaceGlass.copy(alpha = 0.4f),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary
