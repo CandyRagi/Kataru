@@ -25,12 +25,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -550,8 +552,10 @@ fun PlayerScreen(
 
             // Controls
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 PlayerControlButton(
@@ -613,7 +617,7 @@ private fun DynamicSkipButton(
         ),
         label = "controlScale"
     )
-    
+
     Box(
         modifier = Modifier
             .size(56.dp)
@@ -632,30 +636,27 @@ private fun DynamicSkipButton(
         Box(contentAlignment = Alignment.Center) {
             // Circular arrow icon
             Icon(
-                imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
+                imageVector = Icons.Default.Replay,
                 contentDescription = if (isForward) "Forward $interval" else "Rewind $interval",
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier
+                    .size(32.dp)
+                    .graphicsLayer {
+                        if (isForward) {
+                            scaleX = -1f // Flip horizontally for forward
+                        }
+                    },
                 tint = TextPrimary
             )
             
-            // Overlay text to hide the "10" and show actual interval
-            // This is a bit of a hack since we don't have custom vector assets for every number
-            // We use a small background to cover the center of the icon
-            Box(
-                modifier = Modifier
-                    .size(14.dp)
-                    .background(Color.Transparent), // Just a placeholder, the text will cover it
-                contentAlignment = Alignment.Center
-            ) {
-                 Text(
-                    text = "${interval / 1000}",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(top = 2.dp) // Fine tune position
-                )
-            }
+            // Overlay text
+            Text(
+                text = "${interval / 1000}",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                color = TextPrimary,
+                modifier = Modifier.padding(top = 4.dp) // Push text down slightly to center in the open area
+            )
         }
     }
 }
@@ -682,7 +683,7 @@ private fun PlayerControlButton(
     
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(48.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(SurfaceGlass.copy(alpha = 0.5f))
@@ -735,14 +736,14 @@ private fun PlayPauseButton(
     )
 
     Box(
-        modifier = Modifier.size(88.dp),
+        modifier = Modifier.size(76.dp),
         contentAlignment = Alignment.Center
     ) {
         // Animated glow ring when playing
         if (isPlaying) {
             Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(76.dp)
                     .scale(glowScale)
                     .alpha(0.4f)
                     .blur(12.dp)
@@ -760,7 +761,7 @@ private fun PlayPauseButton(
         
         Box(
             modifier = Modifier
-                .size(80.dp)
+                .size(68.dp)
                 .scale(scale)
                 .shadow(16.dp, CircleShape)
                 .background(
@@ -793,7 +794,7 @@ private fun PlayPauseButton(
             Icon(
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Play",
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(36.dp),
                 tint = Color.White
             )
         }

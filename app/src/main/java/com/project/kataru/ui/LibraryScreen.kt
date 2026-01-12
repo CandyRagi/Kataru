@@ -124,14 +124,6 @@ fun LibraryScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            AccentPrimary.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
-                    )
-                )
         ) {
             Row(
                 modifier = Modifier
@@ -139,26 +131,14 @@ fun LibraryScreen(
                     .padding(start = 20.dp, end = 12.dp, bottom = 12.dp, top = 28.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Animated title with glow effect
-                Box {
-                    Text(
-                        text = "Library",
-                        modifier = Modifier
-                            .padding(top = 6.dp)
-                            .alpha(0.5f)
-                            .blur(8.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentPrimary
-                    )
-                    Text(
-                        text = "Library",
-                        modifier = Modifier.padding(top = 6.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                }
+                // Animated title
+                Text(
+                    text = "Library",
+                    modifier = Modifier.padding(top = 6.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
                 

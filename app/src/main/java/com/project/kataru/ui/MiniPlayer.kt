@@ -92,24 +92,7 @@ fun MiniPlayer(
     Box(
         modifier = modifier.fillMaxWidth()
     ) {
-        // Glow effect behind when playing
-        if (isPlaying) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(glowAlpha)
-                    .blur(24.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                AccentPrimary,
-                                AccentTertiary
-                            )
-                        ),
-                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                    )
-            )
-        }
+
         
         Surface(
             modifier = Modifier

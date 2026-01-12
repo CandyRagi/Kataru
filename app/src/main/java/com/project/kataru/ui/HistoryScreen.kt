@@ -123,14 +123,6 @@ fun HistoryScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            AccentPrimary.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
-                    )
-                )
         ) {
             Row(
                 modifier = Modifier
@@ -140,25 +132,13 @@ fun HistoryScreen(
             ) {
                 AnimatedBackButton(onClick = onBackClick)
                 
-                Box {
-                    Text(
-                        text = "History",
-                        modifier = Modifier
-                            .padding(start = 4.dp, top = 6.dp)
-                            .alpha(0.5f)
-                            .blur(8.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentPrimary
-                    )
-                    Text(
-                        text = "History",
-                        modifier = Modifier.padding(start = 4.dp, top = 6.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                }
+                Text(
+                    text = "History",
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
                 

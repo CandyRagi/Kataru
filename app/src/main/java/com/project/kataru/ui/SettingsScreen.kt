@@ -103,14 +103,6 @@ fun SettingsScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            accentColor.copy(alpha = 0.2f),
-                            Color.Transparent
-                        )
-                    )
-                )
         ) {
             Row(
                 modifier = Modifier
@@ -120,25 +112,13 @@ fun SettingsScreen(
             ) {
                 AnimatedSettingsBackButton(onClick = onBackClick)
                 
-                Box {
-                    Text(
-                        text = "Settings",
-                        modifier = Modifier
-                            .padding(start = 4.dp, top = 6.dp)
-                            .alpha(0.6f)
-                            .blur(12.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor
-                    )
-                    Text(
-                        text = "Settings",
-                        modifier = Modifier.padding(start = 4.dp, top = 6.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                }
+                Text(
+                    text = "Settings",
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
             }
         }
 
