@@ -24,8 +24,8 @@ class KataruWidget : AppWidgetProvider() {
     companion object {
         const val ACTION_PLAY = "com.project.kataru.action.PLAY"
         const val ACTION_PAUSE = "com.project.kataru.action.PAUSE"
-        const val ACTION_NEXT = "com.project.kataru.action.NEXT"
-        const val ACTION_PREV = "com.project.kataru.action.PREV"
+        const val ACTION_FORWARD = "com.project.kataru.action.FORWARD"
+        const val ACTION_REWIND = "com.project.kataru.action.REWIND"
 
         fun updateWidget(
             context: Context,
@@ -52,7 +52,7 @@ class KataruWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_author, author)
 
             // Update Play/Pause icon
-            val playPauseIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+            val playPauseIcon = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
             views.setImageViewResource(R.id.widget_play_pause, playPauseIcon)
 
             // Load Album Art
@@ -86,8 +86,8 @@ class KataruWidget : AppWidgetProvider() {
 
             // Click Intents
             views.setOnClickPendingIntent(R.id.widget_play_pause, getPendingIntent(context, if (isPlaying) ACTION_PAUSE else ACTION_PLAY))
-            views.setOnClickPendingIntent(R.id.widget_next, getPendingIntent(context, ACTION_NEXT))
-            views.setOnClickPendingIntent(R.id.widget_prev, getPendingIntent(context, ACTION_PREV))
+            views.setOnClickPendingIntent(R.id.widget_forward, getPendingIntent(context, ACTION_FORWARD))
+            views.setOnClickPendingIntent(R.id.widget_rewind, getPendingIntent(context, ACTION_REWIND))
             
             // Open App on Title Click
             val appIntent = Intent(context, MainActivity::class.java)

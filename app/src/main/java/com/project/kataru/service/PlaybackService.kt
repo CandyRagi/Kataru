@@ -24,8 +24,14 @@ class PlaybackService : MediaSessionService() {
                 }
             }
             com.project.kataru.widget.KataruWidget.ACTION_PAUSE -> mediaSession?.player?.pause()
-            com.project.kataru.widget.KataruWidget.ACTION_NEXT -> mediaSession?.player?.seekToNext()
-            com.project.kataru.widget.KataruWidget.ACTION_PREV -> mediaSession?.player?.seekToPrevious()
+            com.project.kataru.widget.KataruWidget.ACTION_FORWARD -> mediaSession?.player?.let { player ->
+                val newPosition = (player.currentPosition + 10_000).coerceAtMost(player.duration)
+                player.seekTo(newPosition)
+            }
+            com.project.kataru.widget.KataruWidget.ACTION_REWIND -> mediaSession?.player?.let { player ->
+                val newPosition = (player.currentPosition - 10_000).coerceAtLeast(0)
+                player.seekTo(newPosition)
+            }
         }
         return super.onStartCommand(intent, flags, startId)
     }
