@@ -1,19 +1,46 @@
 # Kataru 🎧
 
-**Kataru** is a modern, beautiful, and feature-rich audiobook player for Android, built with **Jetpack Compose** and **Media3**.
+A slick audiobook player for Android. Built because I got tired of clunky apps that look like they're from 2015.
 
-## Features
+## What it does
 
-- **Local Playback**: Seamless playback of audiobooks stored on your device.
-- **Mini Player**: Persistent bottom player with rounded aesthetics and progress tracking.
-- **Smart History**: Automatically resumes exactly where you left off, even after restarting the app.
-- **Modern UI**: Edge-to-edge design, dynamic theming, and smooth animations.
-- **Dark Mode**: Fully supported dark theme for comfortable night listening.
+**The basics:**
+- Plays your local audiobooks (MP3, M4B, M4A, FLAC, and more)
+- Remembers exactly where you stopped, every time
+- Looks good doing it
 
+**Library:**
+- Point it to a folder and it finds your books
+- Scans subfolders too — if you have a folder with an M4B and a cover image, it picks it up automatically
+- Grid or list view, your choice
+- Search that actually works
 
-- **Language**: [Kotlin](https://kotlinlang.org/)
-- **UI**: [Jetpack Compose](https://developer.android.com/jetpack/compose)
-- **Audio**: [Media3 (ExoPlayer)](https://developer.android.com/media/media3)
-- **Image Loading**: [Coil](https://coil-kt.github.io/coil/)
-- **Architecture**: MVVM with Android Architecture Components
+**Player:**
+- Full-screen player with album art, progress bar, the whole deal
+- Mini player that sticks to the bottom so you don't lose your spot
+- Skip forward/back 10 seconds (because who needs next/previous track for audiobooks?)
+- Playback speed control — go from 0.5x to 2x
+- Volume control without leaving the app
 
+**Widget:**
+- Home screen widget that looks clean
+- Play/pause, skip ±10s, all from your home screen
+- Shows the current book and cover art
+- Works even when the app is closed
+
+**Customization:**
+- Pick your accent color
+- Dark mode (obviously)
+- Glassmorphic UI throughout — transparent backgrounds, subtle blurs, rounded everything
+
+## Tech stuff
+
+- Kotlin + Jetpack Compose
+- Media3 ExoPlayer for audio
+- Room for history/bookmarks
+- Coil for image loading
+- MVVM architecture
+
+---
+
+Made by someone who just wanted a nice audiobook player.
