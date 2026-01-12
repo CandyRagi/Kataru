@@ -25,43 +25,76 @@ class AudioRepository(private val context: Context) {
         val audioBooks = mutableListOf<AudioBook>()
         val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return emptyList()
         val retriever = android.media.MediaMetadataRetriever()
+        val supportedExtensions = listOf(".mp3", ".m4b", ".m4a", ".aac", ".flac", ".ogg", ".wav")
+        val imageExtensions = listOf(".jpg", ".jpeg", ".png", ".webp")
 
         if (documentFile.isDirectory) {
             documentFile.listFiles().forEach { file ->
-                if (file.isFile && file.name?.endsWith(".mp3", ignoreCase = true) == true) {
-                    try {
-                        retriever.setDataSource(context, file.uri)
-                        val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.name ?: "Unknown Title"
-                        val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Author"
-                        val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
-                        val duration = durationStr?.toLongOrNull() ?: 0L
-                        
-                        val id = file.uri.toString().hashCode().toString()
-                        val albumArtUri = getEmbeddedAlbumArt(context, file.uri, id)
-                        
-                        audioBooks.add(
-                            AudioBook(
-                                id = id,
-                                title = title,
-                                author = artist,
-                                uri = file.uri,
-                                duration = duration,
-                                albumArtUri = albumArtUri
+                val fileName = file.name?.lowercase() ?: ""
+                
+                // Check if it's an audio file directly in the source folder
+                if (file.isFile && supportedExtensions.any { fileName.endsWith(it) }) {
+                    addAudioBookFromFile(file, retriever, audioBooks)
+                }
+                
+                // Check if it's a subfolder (1 level deep only)
+                if (file.isDirectory) {
+                    val subFiles = file.listFiles()
+                    
+                    // Find audio file in subfolder
+                    val audioFile = subFiles.find { subFile ->
+                        val subFileName = subFile.name?.lowercase() ?: ""
+                        subFile.isFile && supportedExtensions.any { subFileName.endsWith(it) }
+                    }
+                    
+                    // Find cover image in subfolder
+                    val coverFile = subFiles.find { subFile ->
+                        val subFileName = subFile.name?.lowercase() ?: ""
+                        subFile.isFile && imageExtensions.any { subFileName.endsWith(it) }
+                    }
+                    
+                    if (audioFile != null) {
+                        try {
+                            retriever.setDataSource(context, audioFile.uri)
+                            val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE) 
+                                ?: file.name // Use folder name as title
+                                ?: "Unknown Title"
+                            val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Author"
+                            val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            val duration = durationStr?.toLongOrNull() ?: 0L
+                            
+                            val id = audioFile.uri.toString().hashCode().toString()
+                            
+                            // Use cover image from folder if available, otherwise try embedded art
+                            val albumArtUri = if (coverFile != null) {
+                                coverFile.uri
+                            } else {
+                                getEmbeddedAlbumArt(context, audioFile.uri, id)
+                            }
+                            
+                            audioBooks.add(
+                                AudioBook(
+                                    id = id,
+                                    title = title,
+                                    author = artist,
+                                    uri = audioFile.uri,
+                                    duration = duration,
+                                    albumArtUri = albumArtUri
+                                )
                             )
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        // Fallback if extraction fails
-                        audioBooks.add(
-                            AudioBook(
-                                id = file.uri.toString().hashCode().toString(),
-                                title = file.name ?: "Unknown Title",
-                                author = "Unknown Author",
-                                uri = file.uri,
-                                duration = 0L,
-                                albumArtUri = Uri.EMPTY
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            audioBooks.add(
+                                AudioBook(
+                                    id = audioFile.uri.toString().hashCode().toString(),
+                                    title = file.name ?: "Unknown Title",
+                                    author = "Unknown Author",
+                                    uri = audioFile.uri,
+                                    duration = 0L,
+                                    albumArtUri = coverFile?.uri ?: Uri.EMPTY
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -72,6 +105,42 @@ class AudioRepository(private val context: Context) {
             e.printStackTrace()
         }
         return audioBooks.sortedBy { it.title.lowercase() }
+    }
+
+    private fun addAudioBookFromFile(file: DocumentFile, retriever: android.media.MediaMetadataRetriever, audioBooks: MutableList<AudioBook>) {
+        try {
+            retriever.setDataSource(context, file.uri)
+            val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.name ?: "Unknown Title"
+            val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Author"
+            val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val duration = durationStr?.toLongOrNull() ?: 0L
+            
+            val id = file.uri.toString().hashCode().toString()
+            val albumArtUri = getEmbeddedAlbumArt(context, file.uri, id)
+            
+            audioBooks.add(
+                AudioBook(
+                    id = id,
+                    title = title,
+                    author = artist,
+                    uri = file.uri,
+                    duration = duration,
+                    albumArtUri = albumArtUri
+                )
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            audioBooks.add(
+                AudioBook(
+                    id = file.uri.toString().hashCode().toString(),
+                    title = file.name ?: "Unknown Title",
+                    author = "Unknown Author",
+                    uri = file.uri,
+                    duration = 0L,
+                    albumArtUri = Uri.EMPTY
+                )
+            )
+        }
     }
 
     private fun getEmbeddedAlbumArt(context: Context, fileUri: Uri, id: String): Uri {
