@@ -58,26 +58,32 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         // Header
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 8.dp, end = 16.dp, bottom = 16.dp, top = 24.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        androidx.compose.material3.Surface(
+            color = androidx.compose.ui.graphics.Color(0xFF6750A4),
+            contentColor = androidx.compose.ui.graphics.Color.White,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 16.dp, bottom = 16.dp, top = 24.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = androidx.compose.ui.graphics.Color.White
+                    )
+                }
+                Text(
+                    text = "Settings",
+                    modifier = Modifier.padding(start = 10.dp, top = 6.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = androidx.compose.ui.graphics.Color.White
                 )
             }
-            Text(
-                text = "Settings",
-                modifier = Modifier.padding(start = 10.dp, top = 6.dp),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
         }
 
         Column(

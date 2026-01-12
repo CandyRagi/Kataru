@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -83,34 +84,40 @@ fun HistoryScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 8.dp, end = 16.dp, bottom = 16.dp, top = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            color = androidx.compose.ui.graphics.Color(0xFF6750A4),
+            contentColor = androidx.compose.ui.graphics.Color.White,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            Text(
-                text = "History",
-                modifier = Modifier.padding(start = 10.dp, top = 6.dp),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            if (historyItems.isNotEmpty()) {
-                IconButton(onClick = { showClearConfirmation = true }) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 16.dp, bottom = 16.dp, top = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Clear History",
-                        tint = MaterialTheme.colorScheme.onBackground
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = androidx.compose.ui.graphics.Color.White
                     )
+                }
+                Text(
+                    text = "History",
+                    modifier = Modifier.padding(start = 10.dp, top = 6.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = androidx.compose.ui.graphics.Color.White
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                if (historyItems.isNotEmpty()) {
+                    IconButton(onClick = { showClearConfirmation = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Clear History",
+                            tint = androidx.compose.ui.graphics.Color.White
+                        )
+                    }
                 }
             }
         }
