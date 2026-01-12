@@ -73,7 +73,8 @@ class MainActivity : ComponentActivity() {
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
         
         setContent {
-            KataruTheme {
+            val accentColor by viewModel.accentColor.collectAsState()
+            KataruTheme(accentColor = accentColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color.Transparent
@@ -97,6 +98,7 @@ class MainActivity : ComponentActivity() {
                             val audioBooks by viewModel.audioBooks.collectAsState()
                             val currentBook by viewModel.currentBook.collectAsState()
                             val isPlaying by viewModel.isPlaying.collectAsState()
+                            val accentColor by viewModel.accentColor.collectAsState()
                             
                             var showPlayer by remember { mutableStateOf(false) }
                             var showSettings by remember { mutableStateOf(false) }
@@ -248,12 +250,22 @@ class MainActivity : ComponentActivity() {
                             ) { screen ->
                                 when (screen) {
                                     "Settings" -> {
+                                        val skipForwardInterval by viewModel.skipForwardInterval.collectAsState()
+                                        val skipBackwardInterval by viewModel.skipBackwardInterval.collectAsState()
+                                        
                                         SettingsScreen(
                                             onBackClick = { showSettings = false },
                                             onRescanClick = {
                                                 viewModel.loadAudioBooks()
                                                 showSettings = false
-                                            }
+                                            },
+                                            accentColor = accentColor,
+                                            onAccentColorChange = { viewModel.updateAccentColor(it) },
+                                            skipForwardInterval = skipForwardInterval,
+                                            onSkipForwardChange = { viewModel.setSkipForwardInterval(it) },
+                                            skipBackwardInterval = skipBackwardInterval,
+                                            onSkipBackwardChange = { viewModel.setSkipBackwardInterval(it) },
+                                            onClearHistory = { viewModel.clearHistory() }
                                         )
                                     }
                                     "History" -> {
@@ -275,6 +287,9 @@ class MainActivity : ComponentActivity() {
                                             val duration by viewModel.duration.collectAsState()
                                             val playbackSpeed by viewModel.playbackSpeed.collectAsState()
                                             val volume by viewModel.volume.collectAsState()
+                                            val skipForwardInterval by viewModel.skipForwardInterval.collectAsState()
+                                            val skipBackwardInterval by viewModel.skipBackwardInterval.collectAsState()
+                                            
                                             PlayerScreen(
                                                 book = currentBook!!,
                                                 isPlaying = isPlaying,
@@ -282,6 +297,8 @@ class MainActivity : ComponentActivity() {
                                                 duration = duration,
                                                 playbackSpeed = playbackSpeed,
                                                 volume = volume,
+                                                skipForwardInterval = skipForwardInterval,
+                                                skipBackwardInterval = skipBackwardInterval,
                                                 onPlayPauseClick = { viewModel.togglePlayPause() },
                                                 onSeek = { viewModel.seekTo(it) },
                                                 onSkipForward = { viewModel.skipForward() },
@@ -451,7 +468,7 @@ fun PermissionHandler(onPermissionGranted: @Composable () -> Unit) {
                     },
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentPrimary
+                        containerColor = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {

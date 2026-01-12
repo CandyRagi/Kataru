@@ -1,6 +1,7 @@
 package com.project.kataru.ui
 
 import androidx.compose.animation.core.*
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +26,8 @@ import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
@@ -72,6 +75,8 @@ fun PlayerScreen(
     duration: Long,
     playbackSpeed: Float,
     volume: Float,
+    skipForwardInterval: Long,
+    skipBackwardInterval: Long,
     onPlayPauseClick: () -> Unit,
     onSeek: (Long) -> Unit,
     onSkipForward: () -> Unit,
@@ -96,6 +101,7 @@ fun PlayerScreen(
         label = "glowPulse"
     )
 
+    var isLocked by remember { androidx.compose.runtime.mutableStateOf(false) }
     var showSpeedSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
 
@@ -103,58 +109,75 @@ fun PlayerScreen(
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = { showSpeedSheet = false },
             sheetState = sheetState,
-            containerColor = SurfaceCard,
+            containerColor = MiniPlayerBackground,
             contentColor = TextPrimary,
-            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle(color = TextSecondary) }
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 16.dp)
+                        .size(width = 32.dp, height = 4.dp)
+                        .background(
+                            color = TextMuted.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
                     .padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "Playback Speed",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                    text = "Speed",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
                 
-                val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.25f, 2.5f)
-                
-                LazyColumn {
-                    items(speeds) { speed ->
-                        val isSelected = speed == playbackSpeed
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onPlaybackSpeedChange(speed)
-                                    showSpeedSheet = false
-                                }
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${speed}x",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (isSelected) AccentPrimary else TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                            
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = AccentPrimary
-                                )
-                            }
-                        }
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "0.5x",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                    
+                    Slider(
+                        value = playbackSpeed,
+                        onValueChange = onPlaybackSpeedChange,
+                        valueRange = 0.5f..2.5f,
+                        steps = 7,
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = AccentPrimary,
+                            activeTrackColor = AccentPrimary,
+                            inactiveTrackColor = SliderInactive
+                        )
+                    )
+                    
+                    Text(
+                        text = "2.5x",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
                 }
+                
+                Text(
+                    text = "${String.format("%.2f", playbackSpeed)}x",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentPrimary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -168,23 +191,32 @@ fun PlayerScreen(
         androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = { showVolumeSheet = false },
             sheetState = volumeSheetState,
-            containerColor = SurfaceCard,
+            containerColor = MiniPlayerBackground,
             contentColor = TextPrimary,
-            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle(color = TextSecondary) }
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 16.dp)
+                        .size(width = 32.dp, height = 4.dp)
+                        .background(
+                            color = TextMuted.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 48.dp, start = 24.dp, end = 24.dp)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
             ) {
                 Text(
                     text = "Volume",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    modifier = Modifier
-                        .padding(vertical = 16.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
                 
                 Row(
@@ -195,8 +227,8 @@ fun PlayerScreen(
                     Icon(
                         imageVector = Icons.Default.VolumeUp,
                         contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(24.dp)
+                        tint = TextMuted,
+                        modifier = Modifier.size(20.dp)
                     )
                     
                     Slider(
@@ -214,8 +246,9 @@ fun PlayerScreen(
                     Text(
                         text = "${(volume * 100).toInt()}%",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary,
-                        modifier = Modifier.width(40.dp),
+                        fontWeight = FontWeight.SemiBold,
+                        color = AccentPrimary,
+                        modifier = Modifier.width(48.dp),
                         textAlign = TextAlign.End
                     )
                 }
@@ -229,47 +262,113 @@ fun PlayerScreen(
             .padding(top = 32.dp, start = 24.dp, end = 24.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Bar with Speed and Volume Control
+        // Top Bar with Lock, Speed and Volume Control
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Volume Button
+            // Lock Button - Premium styled
             Box(
                 modifier = Modifier
+                    .size(44.dp)
+                    .shadow(if (isLocked) 8.dp else 4.dp, CircleShape)
                     .clip(CircleShape)
-                    .background(SurfaceGlass)
-                    .border(1.dp, CardBorder, CircleShape)
-                    .clickable { showVolumeSheet = true }
-                    .padding(8.dp)
+                    .background(
+                        brush = if (isLocked) {
+                            Brush.linearGradient(
+                                colors = listOf(GradientPurpleStart, GradientPurpleEnd)
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(SurfaceGlass, SurfaceCard)
+                            )
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.linearGradient(
+                            colors = if (isLocked) {
+                                listOf(AccentPrimary.copy(alpha = 0.6f), AccentTertiary.copy(alpha = 0.3f))
+                            } else {
+                                listOf(CardBorder, CardBorder)
+                            }
+                        ),
+                        shape = CircleShape
+                    )
+                    .clickable { isLocked = !isLocked },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    contentDescription = "Volume",
-                    tint = TextPrimary,
+                    imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (isLocked) "Unlock" else "Lock",
+                    tint = if (isLocked) Color.White else TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.alpha(if (isLocked) 0.4f else 1f)) {
+                    // Volume Button - Premium styled
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .shadow(4.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(SurfaceGlass, SurfaceCard)
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(CardBorder, Color.Transparent)
+                                ),
+                                shape = CircleShape
+                            )
+                            .clickable(enabled = !isLocked) { showVolumeSheet = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Volume",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
 
-            // Speed Button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(SurfaceGlass)
-                    .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
-                    .clickable { showSpeedSheet = true }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "${playbackSpeed}x",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Speed Button - Premium styled with gradient accent
+                    Box(
+                        modifier = Modifier
+                            .shadow(4.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(SurfaceGlass, SurfaceCard)
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(AccentPrimary.copy(alpha = 0.4f), CardBorder)
+                                ),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .clickable(enabled = !isLocked) { showSpeedSheet = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${playbackSpeed}x",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = AccentPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -330,168 +429,184 @@ fun PlayerScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title and Author
-        Text(
-            text = book.title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = book.author,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = TextSecondary
-        )
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (isLocked) 0.4f else 1f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Title and Author
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = book.author,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = TextSecondary
+            )
 
-        // Timeline with gradient track
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Custom styled slider
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Track background
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Timeline with gradient track
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Custom styled slider
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(SliderInactive)
+                        .height(32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Progress fill with gradient
-                    val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+                    // Track background
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(progress.coerceIn(0f, 1f))
+                            .fillMaxWidth()
                             .height(6.dp)
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        AccentPrimary,
-                                        GradientPurpleEnd
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(SliderInactive)
+                    ) {
+                        // Progress fill with gradient
+                        val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                                .height(6.dp)
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            AccentPrimary,
+                                            GradientPurpleEnd
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(3.dp)
+                                )
+                        )
+                    }
+                    
+                    // Invisible slider for interaction
+                    Slider(
+                        value = currentPosition.toFloat(),
+                        onValueChange = { onSeek(it.toLong()) },
+                        valueRange = 0f..duration.toFloat().coerceAtLeast(1f),
+                        enabled = !isLocked,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = AccentPrimary,
+                            activeTrackColor = Color.Transparent,
+                            inactiveTrackColor = Color.Transparent,
+                            disabledThumbColor = AccentPrimary,
+                            disabledActiveTrackColor = Color.Transparent,
+                            disabledInactiveTrackColor = Color.Transparent
+                        ),
+                        thumb = {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .shadow(8.dp, CircleShape)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                Color.White,
+                                                AccentPrimary
+                                            )
+                                        ),
+                                        shape = CircleShape
                                     )
-                                ),
-                                shape = RoundedCornerShape(3.dp)
+                                    .border(2.dp, AccentPrimary, CircleShape)
                             )
+                        }
                     )
                 }
                 
-                // Invisible slider for interaction
-                Slider(
-                    value = currentPosition.toFloat(),
-                    onValueChange = { onSeek(it.toLong()) },
-                    valueRange = 0f..duration.toFloat().coerceAtLeast(1f),
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = AccentPrimary,
-                        activeTrackColor = Color.Transparent,
-                        inactiveTrackColor = Color.Transparent
-                    ),
-                    thumb = {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .shadow(8.dp, CircleShape)
-                                .background(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            Color.White,
-                                            AccentPrimary
-                                        )
-                                    ),
-                                    shape = CircleShape
-                                )
-                                .border(2.dp, AccentPrimary, CircleShape)
-                        )
-                    }
-                )
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = formatTime(currentPosition),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                    Text(
+                        text = formatTime(duration),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Controls
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formatTime(currentPosition),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+                PlayerControlButton(
+                    onClick = onSkipPrevious,
+                    icon = Icons.Default.SkipPrevious,
+                    contentDescription = "Previous",
+                    size = 32.dp,
+                    enabled = !isLocked
                 )
-                Text(
-                    text = formatTime(duration),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+
+                DynamicSkipButton(
+                    onClick = onSkipBackward,
+                    interval = skipBackwardInterval,
+                    isForward = false,
+                    enabled = !isLocked
+                )
+
+                // Main Play/Pause button
+                PlayPauseButton(
+                    isPlaying = isPlaying,
+                    onClick = onPlayPauseClick,
+                    enabled = !isLocked
+                )
+
+                DynamicSkipButton(
+                    onClick = onSkipForward,
+                    interval = skipForwardInterval,
+                    isForward = true,
+                    enabled = !isLocked
+                )
+
+                PlayerControlButton(
+                    onClick = onSkipNext,
+                    icon = Icons.Default.SkipNext,
+                    contentDescription = "Next",
+                    size = 32.dp,
+                    enabled = !isLocked
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            PlayerControlButton(
-                onClick = onSkipPrevious,
-                icon = Icons.Default.SkipPrevious,
-                contentDescription = "Previous",
-                size = 32.dp
-            )
-
-            PlayerControlButton(
-                onClick = onSkipBackward,
-                icon = Icons.Default.Replay10,
-                contentDescription = "Rewind 10s",
-                size = 32.dp
-            )
-
-            // Main Play/Pause button
-            PlayPauseButton(
-                isPlaying = isPlaying,
-                onClick = onPlayPauseClick
-            )
-
-            PlayerControlButton(
-                onClick = onSkipForward,
-                icon = Icons.Default.Forward10,
-                contentDescription = "Forward 10s",
-                size = 32.dp
-            )
-
-            PlayerControlButton(
-                onClick = onSkipNext,
-                icon = Icons.Default.SkipNext,
-                contentDescription = "Next",
-                size = 32.dp
-            )
         }
     }
 }
 
 @Composable
-private fun PlayerControlButton(
+private fun DynamicSkipButton(
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    size: androidx.compose.ui.unit.Dp
+    interval: Long,
+    isForward: Boolean,
+    enabled: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.85f else 1f,
+        targetValue = if (isPressed && enabled) 0.85f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessHigh
@@ -509,6 +624,73 @@ private fun PlayerControlButton(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = enabled,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            // Circular arrow icon
+            Icon(
+                imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
+                contentDescription = if (isForward) "Forward $interval" else "Rewind $interval",
+                modifier = Modifier.size(32.dp),
+                tint = TextPrimary
+            )
+            
+            // Overlay text to hide the "10" and show actual interval
+            // This is a bit of a hack since we don't have custom vector assets for every number
+            // We use a small background to cover the center of the icon
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .background(Color.Transparent), // Just a placeholder, the text will cover it
+                contentAlignment = Alignment.Center
+            ) {
+                 Text(
+                    text = "${interval / 1000}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(top = 2.dp) // Fine tune position
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerControlButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    size: androidx.compose.ui.unit.Dp,
+    enabled: Boolean = true
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 0.85f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "controlScale"
+    )
+    
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .scale(scale)
+            .clip(CircleShape)
+            .background(SurfaceGlass.copy(alpha = 0.5f))
+            .border(1.dp, CardBorder, CircleShape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
@@ -525,13 +707,14 @@ private fun PlayerControlButton(
 @Composable
 private fun PlayPauseButton(
     isPlaying: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.9f else 1f,
+        targetValue = if (isPressed && enabled) 0.9f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessHigh
@@ -602,6 +785,7 @@ private fun PlayPauseButton(
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
+                    enabled = enabled,
                     onClick = onClick
                 ),
             contentAlignment = Alignment.Center

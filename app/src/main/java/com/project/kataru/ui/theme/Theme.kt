@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -63,14 +64,46 @@ private val LightColorScheme = lightColorScheme(
 fun KataruTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    accentColor: Color = AccentPrimary,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        else -> DarkColorScheme // Always use our premium dark theme
+    val colorScheme = remember(accentColor) {
+        darkColorScheme(
+            primary = accentColor,
+            onPrimary = DeepPurple,
+            primaryContainer = GradientPurpleStart, // Could be adjusted based on accent, but keeping for now
+            onPrimaryContainer = TextPrimary,
+            
+            secondary = AccentSecondary,
+            onSecondary = DeepPurple,
+            secondaryContainer = SurfaceGlass,
+            onSecondaryContainer = TextPrimary,
+            
+            tertiary = AccentTertiary,
+            onTertiary = DeepPurple,
+            tertiaryContainer = SurfaceCard,
+            onTertiaryContainer = TextPrimary,
+            
+            background = DeepPurple,
+            onBackground = TextPrimary,
+            
+            surface = SurfaceDark,
+            onSurface = TextPrimary,
+            surfaceVariant = SurfaceGlass,
+            onSurfaceVariant = TextSecondary,
+            
+            outline = CardBorder,
+            outlineVariant = Color(0xFF3A3550),
+            
+            error = Color(0xFFFF6B6B),
+            onError = Color.White,
+            
+            inverseSurface = TextPrimary,
+            inverseOnSurface = DeepPurple,
+            inversePrimary = GradientPurpleEnd,
+            
+            surfaceTint = accentColor
+        )
     }
     
     val view = LocalView.current

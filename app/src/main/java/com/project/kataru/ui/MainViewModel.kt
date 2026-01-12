@@ -8,6 +8,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.project.kataru.data.AudioBook
@@ -48,7 +50,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _duration = MutableStateFlow(0L)
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
-    private val _playbackSpeed = MutableStateFlow(1.0f)
+    private val settingsManager = com.project.kataru.data.SettingsManager(application)
+
+    private val _accentColor = MutableStateFlow(Color(settingsManager.accentColor))
+    val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
+
+    private val _playbackSpeed = MutableStateFlow(settingsManager.playbackSpeed)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
     private val _volume = MutableStateFlow(1.0f)
@@ -242,7 +249,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun skipForward() {
         controller?.let {
-            val newPosition = (it.currentPosition + 10000).coerceAtMost(it.duration)
+            val interval = _skipForwardInterval.value
+            val newPosition = (it.currentPosition + interval).coerceAtMost(it.duration)
             it.seekTo(newPosition)
             _currentPosition.value = newPosition
         }
@@ -250,7 +258,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun skipBackward() {
         controller?.let {
-            val newPosition = (it.currentPosition - 10000).coerceAtLeast(0)
+            val interval = _skipBackwardInterval.value
+            val newPosition = (it.currentPosition - interval).coerceAtLeast(0)
             it.seekTo(newPosition)
             _currentPosition.value = newPosition
         }
@@ -278,7 +287,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPlaybackSpeed(speed: Float) {
         _playbackSpeed.value = speed
+        settingsManager.playbackSpeed = speed
         controller?.setPlaybackSpeed(speed)
+    }
+
+    fun updateAccentColor(color: Color) {
+        _accentColor.value = color
+        settingsManager.accentColor = color.toArgb().toLong()
+    }
+
+    private val _skipForwardInterval = MutableStateFlow(settingsManager.skipForwardInterval)
+    val skipForwardInterval: StateFlow<Long> = _skipForwardInterval.asStateFlow()
+
+    private val _skipBackwardInterval = MutableStateFlow(settingsManager.skipBackwardInterval)
+    val skipBackwardInterval: StateFlow<Long> = _skipBackwardInterval.asStateFlow()
+
+    fun setSkipForwardInterval(interval: Long) {
+        _skipForwardInterval.value = interval
+        settingsManager.skipForwardInterval = interval
+    }
+
+    fun setSkipBackwardInterval(interval: Long) {
+        _skipBackwardInterval.value = interval
+        settingsManager.skipBackwardInterval = interval
     }
 
     fun setVolume(volume: Float) {
