@@ -48,6 +48,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _duration = MutableStateFlow(0L)
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
+    private val _playbackSpeed = MutableStateFlow(1.0f)
+    val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+
+    private val _volume = MutableStateFlow(1.0f)
+    val volume: StateFlow<Float> = _volume.asStateFlow()
+
     private val historyManager = com.project.kataru.data.HistoryManager(application)
 
     private val _historyItems = MutableStateFlow<List<com.project.kataru.data.HistoryEntity>>(emptyList())
@@ -268,6 +274,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (currentIndex > 0) {
             playAudioBook(list[currentIndex - 1])
         }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        _playbackSpeed.value = speed
+        controller?.setPlaybackSpeed(speed)
+    }
+
+    fun setVolume(volume: Float) {
+        _volume.value = volume
+        controller?.volume = volume
     }
 
     fun toggleViewMode() {

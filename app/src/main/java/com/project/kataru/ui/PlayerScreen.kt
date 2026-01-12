@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,8 +32,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,25 +70,20 @@ fun PlayerScreen(
     isPlaying: Boolean,
     currentPosition: Long,
     duration: Long,
+    playbackSpeed: Float,
+    volume: Float,
     onPlayPauseClick: () -> Unit,
     onSeek: (Long) -> Unit,
     onSkipForward: () -> Unit,
     onSkipBackward: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
+    onPlaybackSpeedChange: (Float) -> Unit,
+    onVolumeChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Vinyl rotation animation
     val infiniteTransition = rememberInfiniteTransition(label = "vinyl")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "vinylRotation"
-    )
     
     // Glow pulse animation
     val glowAlpha by infiniteTransition.animateFloat(
@@ -95,13 +96,185 @@ fun PlayerScreen(
         label = "glowPulse"
     )
 
+    var showSpeedSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+
+    if (showSpeedSheet) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showSpeedSheet = false },
+            sheetState = sheetState,
+            containerColor = SurfaceCard,
+            contentColor = TextPrimary,
+            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle(color = TextSecondary) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Playback Speed",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                
+                val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.25f, 2.5f)
+                
+                LazyColumn {
+                    items(speeds) { speed ->
+                        val isSelected = speed == playbackSpeed
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onPlaybackSpeedChange(speed)
+                                    showSpeedSheet = false
+                                }
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${speed}x",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isSelected) AccentPrimary else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = AccentPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    var showVolumeSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val volumeSheetState = androidx.compose.material3.rememberModalBottomSheetState()
+
+    if (showVolumeSheet) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showVolumeSheet = false },
+            sheetState = volumeSheetState,
+            containerColor = SurfaceCard,
+            contentColor = TextPrimary,
+            dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle(color = TextSecondary) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 48.dp, start = 24.dp, end = 24.dp)
+            ) {
+                Text(
+                    text = "Volume",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    modifier = Modifier
+                        .padding(vertical = 16.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    
+                    Slider(
+                        value = volume,
+                        onValueChange = onVolumeChange,
+                        valueRange = 0f..1f,
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = AccentPrimary,
+                            activeTrackColor = AccentPrimary,
+                            inactiveTrackColor = SliderInactive
+                        )
+                    )
+                    
+                    Text(
+                        text = "${(volume * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary,
+                        modifier = Modifier.width(40.dp),
+                        textAlign = TextAlign.End
+                    )
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(top = 32.dp, start = 24.dp, end = 24.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Album Art with Vinyl Effect
+        // Top Bar with Speed and Volume Control
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Volume Button
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(SurfaceGlass)
+                    .border(1.dp, CardBorder, CircleShape)
+                    .clickable { showVolumeSheet = true }
+                    .padding(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VolumeUp,
+                    contentDescription = "Volume",
+                    tint = TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Speed Button
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(SurfaceGlass)
+                    .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+                    .clickable { showSpeedSheet = true }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "${playbackSpeed}x",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Album Art
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -109,112 +282,50 @@ fun PlayerScreen(
             contentAlignment = Alignment.Center
         ) {
             // Ambient glow behind album art
-            if (isPlaying) {
-                Box(
-                    modifier = Modifier
-                        .size(280.dp)
-                        .alpha(glowAlpha)
-                        .blur(40.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    AccentPrimary,
-                                    AccentTertiary.copy(alpha = 0.5f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                )
-            }
-            
-            // Vinyl record (outer ring)
             Box(
                 modifier = Modifier
                     .size(320.dp)
-                    .graphicsLayer {
-                        rotationZ = if (isPlaying) rotation else 0f
-                    }
+                    .alpha(if (isPlaying) glowAlpha else 0f)
+                    .blur(40.dp)
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFF1A1A2E),
-                                Color(0xFF0D0D1A),
-                                Color(0xFF000000)
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.sweepGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.1f),
-                                Color.Transparent,
-                                Color.White.copy(alpha = 0.05f),
+                                AccentPrimary,
+                                AccentTertiary.copy(alpha = 0.5f),
                                 Color.Transparent
                             )
                         ),
                         shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                // Vinyl grooves effect
-                Box(
-                    modifier = Modifier
-                        .size(300.dp)
-                        .border(
-                            width = 0.5.dp,
-                            color = Color.White.copy(alpha = 0.03f),
-                            shape = CircleShape
-                        )
-                )
-                Box(
-                    modifier = Modifier
-                        .size(260.dp)
-                        .border(
-                            width = 0.5.dp,
-                            color = Color.White.copy(alpha = 0.02f),
-                            shape = CircleShape
-                        )
-                )
-                
-                // Album art in center
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(book.albumArtUri)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Album Art",
-                    placeholder = painterResource(R.drawable.ic_launcher_foreground),
-                    error = painterResource(R.drawable.ic_launcher_foreground),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(200.dp)
-                        .shadow(16.dp, CircleShape)
-                        .clip(CircleShape)
-                        .border(
-                            width = 4.dp,
-                            brush = Brush.sweepGradient(
-                                colors = listOf(
-                                    AccentPrimary.copy(alpha = 0.6f),
-                                    Color.Transparent,
-                                    AccentTertiary.copy(alpha = 0.4f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                )
-                
-                // Center spindle
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(Color(0xFF2A2A3E), CircleShape)
-                        .border(2.dp, Color.White.copy(alpha = 0.1f), CircleShape)
-                )
-            }
+                    )
+            )
+            
+            // Album art
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(book.albumArtUri)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Album Art",
+                placeholder = painterResource(R.drawable.ic_launcher_foreground),
+                error = painterResource(R.drawable.ic_launcher_foreground),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(300.dp)
+                    .shadow(16.dp, CircleShape)
+                    .clip(CircleShape)
+                    .border(
+                        width = 4.dp,
+                        brush = Brush.sweepGradient(
+                            colors = listOf(
+                                AccentPrimary.copy(alpha = 0.6f),
+                                Color.Transparent,
+                                AccentTertiary.copy(alpha = 0.4f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -440,7 +551,10 @@ private fun PlayPauseButton(
         label = "glowScale"
     )
 
-    Box(contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.size(88.dp),
+        contentAlignment = Alignment.Center
+    ) {
         // Animated glow ring when playing
         if (isPlaying) {
             Box(

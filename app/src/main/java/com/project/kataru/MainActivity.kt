@@ -273,17 +273,23 @@ class MainActivity : ComponentActivity() {
                                         if (currentBook != null) {
                                             val currentPosition by viewModel.currentPosition.collectAsState()
                                             val duration by viewModel.duration.collectAsState()
+                                            val playbackSpeed by viewModel.playbackSpeed.collectAsState()
+                                            val volume by viewModel.volume.collectAsState()
                                             PlayerScreen(
                                                 book = currentBook!!,
                                                 isPlaying = isPlaying,
                                                 currentPosition = currentPosition,
                                                 duration = duration,
+                                                playbackSpeed = playbackSpeed,
+                                                volume = volume,
                                                 onPlayPauseClick = { viewModel.togglePlayPause() },
                                                 onSeek = { viewModel.seekTo(it) },
                                                 onSkipForward = { viewModel.skipForward() },
                                                 onSkipBackward = { viewModel.skipBackward() },
                                                 onSkipNext = { viewModel.skipToNext() },
-                                                onSkipPrevious = { viewModel.skipToPrevious() }
+                                                onSkipPrevious = { viewModel.skipToPrevious() },
+                                                onPlaybackSpeedChange = { viewModel.setPlaybackSpeed(it) },
+                                                onVolumeChange = { viewModel.setVolume(it) }
                                             )
                                         }
                                     }
