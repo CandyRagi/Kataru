@@ -56,6 +56,12 @@ import com.project.kataru.R
 import com.project.kataru.data.AudioBook
 import com.project.kataru.ui.theme.*
 
+/*
+ * MiniPlayer - The little bar at the bottom that shows what's playing. Has album art, title,
+ * author, play/pause, skip buttons, and a thin progress line. Tap it to open the full player.
+ * Sticks to the bottom of the library screen so you always have quick controls.
+ */
+
 @Composable
 fun MiniPlayer(
     book: AudioBook,

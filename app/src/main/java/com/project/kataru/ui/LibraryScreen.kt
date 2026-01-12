@@ -77,6 +77,12 @@ import com.project.kataru.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
+/*
+ * LibraryScreen - The main screen showing all your audiobooks. Has a search bar, grid/list
+ * toggle, and cards for each book with cover art. Also shows the MiniPlayer at the bottom
+ * when something is playing. Tapping a book opens the full player. Pretty standard library UI.
+ */
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(

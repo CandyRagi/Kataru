@@ -19,6 +19,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/*
+ * KataruWidget - The home screen widget. Shows current book with cover art and controls.
+ * Rewind/forward 10s buttons instead of skip track (makes more sense for audiobooks).
+ * Saves its state to SharedPreferences so it doesn't reset when the app gets killed.
+ * Uses Coil to load album art into RemoteViews. Tapping the art opens the app.
+ */
+
 class KataruWidget : AppWidgetProvider() {
 
     companion object {

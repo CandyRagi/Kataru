@@ -68,6 +68,12 @@ import com.project.kataru.R
 import com.project.kataru.data.AudioBook
 import com.project.kataru.ui.theme.*
 
+/*
+ * PlayerScreen - The full-screen player with all the bells and whistles. Shows big album art,
+ * progress slider, play/pause, skip ±10s, playback speed control, volume slider, and a lock
+ * mode so you don't accidentally touch stuff. Lots of animations to make it feel premium.
+ */
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
@@ -382,23 +388,7 @@ fun PlayerScreen(
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            // Ambient glow behind album art
-            Box(
-                modifier = Modifier
-                    .size(320.dp)
-                    .alpha(if (isPlaying) glowAlpha else 0f)
-                    .blur(40.dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                AccentTertiary.copy(alpha = 0.5f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-            )
+
             
             // Album art
             AsyncImage(
@@ -412,20 +402,7 @@ fun PlayerScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(300.dp)
-                    .shadow(16.dp, CircleShape)
-                    .clip(CircleShape)
-                    .border(
-                        width = 4.dp,
-                        brush = Brush.sweepGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                                Color.Transparent,
-                                AccentTertiary.copy(alpha = 0.4f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
+                    .clip(RoundedCornerShape(20.dp))
             )
         }
 

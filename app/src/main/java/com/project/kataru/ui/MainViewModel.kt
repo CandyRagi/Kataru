@@ -21,6 +21,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/*
+ * MainViewModel - The brain of the app. Handles all the state for playback, library,
+ * settings, and history. Connects to the PlaybackService via MediaController and keeps
+ * the UI in sync with what's actually playing. Also manages accent colors, playback speed,
+ * volume, and refreshing the audiobook list.
+ */
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AudioRepository(application)
 

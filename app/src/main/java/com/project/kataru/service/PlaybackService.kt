@@ -9,6 +9,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.take
 
+/*
+ * PlaybackService - The background service that actually plays the audio. Uses ExoPlayer
+ * under the hood via Media3. Handles widget commands (play, pause, seek), restores the
+ * last played book from history if needed, and keeps the widget updated with current state.
+ * Runs as a foreground service so playback continues even when the app is closed.
+ */
+
 class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private lateinit var historyManager: com.project.kataru.data.HistoryManager

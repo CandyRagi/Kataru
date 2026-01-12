@@ -8,6 +8,13 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/*
+ * AudioRepository - Finds and loads audiobooks from your device. Can scan a specific folder
+ * you pick (checks subfolders one level deep too) or fall back to MediaStore. Extracts
+ * metadata like title, author, duration, and album art. Supports MP3, M4B, M4A, FLAC, etc.
+ * If a subfolder has an audio file + cover image, it treats that folder as one audiobook.
+ */
+
 class AudioRepository(private val context: Context) {
 
     private val settingsManager = SettingsManager(context)
