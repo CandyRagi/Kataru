@@ -157,8 +157,8 @@ fun PlayerScreen(
                         steps = 7,
                         modifier = Modifier.weight(1f),
                         colors = SliderDefaults.colors(
-                            thumbColor = AccentPrimary,
-                            activeTrackColor = AccentPrimary,
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
                             inactiveTrackColor = SliderInactive
                         )
                     )
@@ -174,7 +174,7 @@ fun PlayerScreen(
                     text = "${String.format("%.2f", playbackSpeed)}x",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = AccentPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp),
@@ -239,8 +239,8 @@ fun PlayerScreen(
                         valueRange = 0f..1f,
                         modifier = Modifier.weight(1f),
                         colors = SliderDefaults.colors(
-                            thumbColor = AccentPrimary,
-                            activeTrackColor = AccentPrimary,
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
                             inactiveTrackColor = SliderInactive
                         )
                     )
@@ -249,7 +249,7 @@ fun PlayerScreen(
                         text = "${(volume * 100).toInt()}%",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = AccentPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.width(48.dp),
                         textAlign = TextAlign.End
                     )
@@ -291,7 +291,7 @@ fun PlayerScreen(
                         width = 1.dp,
                         brush = Brush.linearGradient(
                             colors = if (isLocked) {
-                                listOf(AccentPrimary.copy(alpha = 0.6f), AccentTertiary.copy(alpha = 0.3f))
+                                listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), AccentTertiary.copy(alpha = 0.3f))
                             } else {
                                 listOf(CardBorder, CardBorder)
                             }
@@ -355,7 +355,7 @@ fun PlayerScreen(
                             .border(
                                 width = 1.dp,
                                 brush = Brush.linearGradient(
-                                    colors = listOf(AccentPrimary.copy(alpha = 0.4f), CardBorder)
+                                    colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), CardBorder)
                                 ),
                                 shape = RoundedCornerShape(20.dp)
                             )
@@ -366,7 +366,7 @@ fun PlayerScreen(
                         Text(
                             text = "${playbackSpeed}x",
                             style = MaterialTheme.typography.labelLarge,
-                            color = AccentPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -391,7 +391,7 @@ fun PlayerScreen(
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                AccentPrimary,
+                                MaterialTheme.colorScheme.primary,
                                 AccentTertiary.copy(alpha = 0.5f),
                                 Color.Transparent
                             )
@@ -418,7 +418,7 @@ fun PlayerScreen(
                         width = 4.dp,
                         brush = Brush.sweepGradient(
                             colors = listOf(
-                                AccentPrimary.copy(alpha = 0.6f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                                 Color.Transparent,
                                 AccentTertiary.copy(alpha = 0.4f),
                                 Color.Transparent
@@ -485,7 +485,7 @@ fun PlayerScreen(
                                 .background(
                                     brush = Brush.horizontalGradient(
                                         colors = listOf(
-                                            AccentPrimary,
+                                            MaterialTheme.colorScheme.primary,
                                             GradientPurpleEnd
                                         )
                                     ),
@@ -502,10 +502,10 @@ fun PlayerScreen(
                         enabled = !isLocked,
                         modifier = Modifier.fillMaxWidth(),
                         colors = SliderDefaults.colors(
-                            thumbColor = AccentPrimary,
+                            thumbColor = MaterialTheme.colorScheme.primary,
                             activeTrackColor = Color.Transparent,
                             inactiveTrackColor = Color.Transparent,
-                            disabledThumbColor = AccentPrimary,
+                            disabledThumbColor = MaterialTheme.colorScheme.primary,
                             disabledActiveTrackColor = Color.Transparent,
                             disabledInactiveTrackColor = Color.Transparent
                         ),
@@ -518,12 +518,12 @@ fun PlayerScreen(
                                         brush = Brush.radialGradient(
                                             colors = listOf(
                                                 Color.White,
-                                                AccentPrimary
+                                                MaterialTheme.colorScheme.primary
                                             )
                                         ),
                                         shape = CircleShape
                                     )
-                                    .border(2.dp, AccentPrimary, CircleShape)
+                                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             )
                         }
                     )
@@ -750,7 +750,7 @@ private fun PlayPauseButton(
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                AccentPrimary,
+                                MaterialTheme.colorScheme.primary,
                                 Color.Transparent
                             )
                         ),
@@ -767,7 +767,7 @@ private fun PlayPauseButton(
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            AccentPrimary,
+                            MaterialTheme.colorScheme.primary,
                             GradientPurpleEnd
                         )
                     ),

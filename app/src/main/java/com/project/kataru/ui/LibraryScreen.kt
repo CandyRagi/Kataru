@@ -176,7 +176,7 @@ fun LibraryScreen(
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
-                                    AccentPrimary.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                                     AccentSecondary.copy(alpha = 0.2f)
                                 )
                             ),
@@ -199,7 +199,7 @@ fun LibraryScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = if (isSearchFocused) AccentPrimary else TextMuted
+                        tint = if (isSearchFocused) MaterialTheme.colorScheme.primary else TextMuted
                     )
                 },
                 trailingIcon = {
@@ -219,9 +219,9 @@ fun LibraryScreen(
                     focusedContainerColor = SurfaceGlass.copy(alpha = 0.8f),
                     unfocusedContainerColor = SurfaceCard.copy(alpha = 0.6f),
                     disabledContainerColor = SurfaceCard,
-                    focusedIndicatorColor = AccentPrimary.copy(alpha = 0.5f),
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                     unfocusedIndicatorColor = CardBorder,
-                    cursorColor = AccentPrimary,
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary
                 )
@@ -580,22 +580,7 @@ private fun AnimatedBookGridItem(
                             .clip(RoundedCornerShape(14.dp))
                     )
                     
-                    // Gradient overlay at bottom
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.6f)
-                                    )
-                                ),
-                                shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp)
-                            )
-                    )
+
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))

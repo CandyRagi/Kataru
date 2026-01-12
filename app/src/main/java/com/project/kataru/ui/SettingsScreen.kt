@@ -90,14 +90,6 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        accentColor.copy(alpha = 0.2f),
-                        Color.Transparent
-                    )
-                )
-            )
     ) {
         // Premium Header
         Box(

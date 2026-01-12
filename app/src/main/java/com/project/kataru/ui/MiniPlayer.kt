@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -94,79 +94,54 @@ fun MiniPlayer(
     ) {
 
         
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-            color = Color.Transparent,
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                MiniPlayerBackground,
-                                SurfaceDark.copy(alpha = 0.95f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+        Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(0.dp))
+            .background(MiniPlayerBackground) // Solid background first to prevent any bleed-through
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MiniPlayerBackground,
+                        SurfaceDark.copy(alpha = 0.95f)
                     )
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.15f),
-                                Color.White.copy(alpha = 0.02f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.02f)
                     )
+                ),
+                shape = RoundedCornerShape(0.dp)
+            )
+            .clickable(onClick = onClick)
+    ) {
+            Column(
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
             ) {
-                Column(
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
-                ) {
-                    Row(
+                Row(
                         modifier = Modifier
                             .weight(1f, fill = false)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Album art with shadow
-                        Box {
-                            // Shadow behind
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(book.albumArtUri)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .alpha(0.5f)
-                                    .blur(8.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                            )
-                            
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(book.albumArtUri)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Album Art",
-                                placeholder = painterResource(R.drawable.ic_launcher_foreground),
-                                error = painterResource(R.drawable.ic_launcher_foreground),
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .shadow(8.dp, RoundedCornerShape(12.dp))
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(SurfaceGlass)
-                            )
-                        }
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(book.albumArtUri)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Album Art",
+                            placeholder = painterResource(R.drawable.ic_launcher_foreground),
+                            error = painterResource(R.drawable.ic_launcher_foreground),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
 
                         Spacer(modifier = Modifier.width(14.dp))
 
@@ -211,7 +186,7 @@ fun MiniPlayer(
                                     .background(
                                         brush = Brush.linearGradient(
                                             colors = listOf(
-                                                AccentPrimary,
+                                                MaterialTheme.colorScheme.primary,
                                                 GradientPurpleEnd
                                             )
                                         ),
@@ -259,7 +234,7 @@ fun MiniPlayer(
                                     .background(
                                         brush = Brush.horizontalGradient(
                                             colors = listOf(
-                                                AccentPrimary,
+                                                MaterialTheme.colorScheme.primary,
                                                 AccentTertiary
                                             )
                                         ),
@@ -269,7 +244,6 @@ fun MiniPlayer(
                         }
                         
                         Spacer(modifier = Modifier.height(8.dp))
-                    }
                 }
             }
         }
