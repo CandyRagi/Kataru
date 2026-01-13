@@ -13,9 +13,9 @@ val Pink40 = Color(0xFF7D5260)
 
 // ============= ENHANCED PREMIUM PALETTE =============
 
-// Primary Background
-val DeepBlue = Color(0xFF0A0A0F)
-val DeepPurple = Color(0xFF0D0B1E)
+// Primary Background - Soft Black
+val DeepBlue = Color(0xFF080808)
+val DeepPurple = Color(0xFF0A0A0C)
 
 // Surfaces with Glassmorphism
 val SurfaceDark = Color(0xFF1A1A2E)
@@ -36,10 +36,10 @@ val GradientPinkStart = Color(0xFFEC4899) // Hot Pink
 val GradientTealStart = Color(0xFF06B6D4) // Cyan
 val GradientOrangeStart = Color(0xFFF97316) // Orange glow
 
-// Main Background Gradient
-val PurpleGradientStart = Color(0xFF2D1B69) // Rich deep purple
-val PurpleGradientMid = Color(0xFF11071F) // Near black purple
-val PurpleGradientEnd = Color(0xFF0A0612) // Almost black
+// Main Background Gradient - Glassy Soft Black with Purple Tint
+val PurpleGradientStart = Color(0xFF1C1A22) // Soft charcoal with subtle purple
+val PurpleGradientMid = Color(0xFF110F14) // Deep soft black with purple hint
+val PurpleGradientEnd = Color(0xFF0A090C) // Near black with faint purple
 
 // Glow & Shadow Colors
 val GlowPurple = Color(0x40BB86FC)

@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
@@ -167,73 +168,97 @@ fun LibraryScreen(
             }
         }
 
-        // Enhanced Search Bar with glow effect
-        Box(
+        // Enhanced Search Bar with glow effect and Add Button
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Glow effect when focused
-            if (isSearchFocused) {
-                Box(
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                // Glow effect when focused
+                if (isSearchFocused) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .blur(16.dp)
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                        AccentSecondary.copy(alpha = 0.2f)
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
+                    )
+                }
+                
+                androidx.compose.material3.OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
                     modifier = Modifier
-                        .matchParentSize()
-                        .blur(16.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                    AccentSecondary.copy(alpha = 0.2f)
-                                )
-                            ),
-                            shape = CircleShape
+                        .fillMaxWidth()
+                        .shadow(4.dp, CircleShape),
+                    placeholder = { 
+                        Text(
+                            "Search your library...",
+                            color = TextMuted
+                        ) 
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = if (isSearchFocused) MaterialTheme.colorScheme.primary else TextMuted
                         )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = TextMuted
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = CircleShape,
+                    colors = androidx.compose.material3.TextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceGlass.copy(alpha = 0.9f),
+                        unfocusedContainerColor = SurfaceGlass.copy(alpha = 0.6f),
+                        disabledContainerColor = SurfaceGlass.copy(alpha = 0.4f),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
                 )
             }
-            
-            androidx.compose.material3.OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+
+            // Circular Add Button
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, CircleShape),
-                placeholder = { 
-                    Text(
-                        "Search your library...",
-                        color = TextMuted
-                    ) 
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = if (isSearchFocused) MaterialTheme.colorScheme.primary else TextMuted
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = TextMuted
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = CircleShape,
-                colors = androidx.compose.material3.TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceGlass.copy(alpha = 0.9f),
-                    unfocusedContainerColor = SurfaceGlass.copy(alpha = 0.6f),
-                    disabledContainerColor = SurfaceGlass.copy(alpha = 0.4f),
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    .size(56.dp) // Match standard touch target / search bar height roughly
+                    .clip(CircleShape)
+                    .background(SurfaceGlass.copy(alpha = 0.6f))
+                    .clickable { /* TODO: Handle add click */ }
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Book",
+                    tint = TextPrimary,
+                    modifier = Modifier.size(24.dp)
                 )
-            )
+            }
         }
 
         androidx.compose.material3.pulltorefresh.PullToRefreshBox(
