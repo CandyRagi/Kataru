@@ -78,6 +78,12 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // PDF Text Extraction
+    implementation(libs.pdfbox.android)
+    
+    // Sherpa-ONNX TTS (AAR from libs folder)
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

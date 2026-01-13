@@ -15,6 +15,7 @@ coil = "2.7.0"
 lifecycleRuntimeKtx = "2.8.7"
 room = "2.6.1"
 ksp = "2.0.21-1.0.27"
+pdfbox = "2.0.27.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,6 +54,9 @@ gson = { group = "com.google.code.gson", name = "gson", version = "2.10.1" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+
+# PDF
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

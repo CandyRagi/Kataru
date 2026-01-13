@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
@@ -103,11 +105,14 @@ fun LibraryScreen(
     onNext: () -> Unit,
     onPrev: () -> Unit,
     onMiniPlayerClick: () -> Unit,
+    onUploadMp3: () -> Unit,
+    onUploadPdf: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
     var contentVisible by remember { mutableStateOf(false) }
+    var showAddOptions by remember { mutableStateOf(false) }
 
     // Trigger content animation
     LaunchedEffect(Unit) {
@@ -248,7 +253,7 @@ fun LibraryScreen(
                     .size(56.dp) // Match standard touch target / search bar height roughly
                     .clip(CircleShape)
                     .background(SurfaceGlass.copy(alpha = 0.6f))
-                    .clickable { /* TODO: Handle add click */ }
+                    .clickable { showAddOptions = true }
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -334,6 +339,119 @@ fun LibraryScreen(
                     onClick = onMiniPlayerClick
                 )
             }
+        }
+    }
+
+    // Glassmorphic Overlay for Add Options
+    AnimatedVisibility(
+        visible = showAddOptions,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable { showAddOptions = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(SurfaceCard)
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { /* Prevent closing when clicking inside */ }
+                    .padding(24.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Add Content",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Upload MP3 Option
+                    UploadOptionItem(
+                        icon = Icons.Default.AudioFile,
+                        title = "Upload MP3",
+                        description = "Import audio files directly",
+                        onClick = { 
+                            onUploadMp3()
+                            showAddOptions = false 
+                        }
+                    )
+                    
+                    // Upload PDF Option
+                    UploadOptionItem(
+                        icon = Icons.Default.PictureAsPdf,
+                        title = "Upload PDF",
+                        description = "Convert PDF to audiobook",
+                        onClick = { 
+                            onUploadPdf()
+                            showAddOptions = false 
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UploadOptionItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceDark.copy(alpha = 0.5f))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(AccentPrimary.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = AccentPrimary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
         }
     }
 }

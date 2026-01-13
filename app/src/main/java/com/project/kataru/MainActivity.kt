@@ -53,8 +53,11 @@ import com.project.kataru.ui.LibraryScreen
 import com.project.kataru.ui.MainViewModel
 import com.project.kataru.ui.PlayerScreen
 import com.project.kataru.ui.SettingsScreen
+import com.project.kataru.ui.PdfConversionDialog
 import com.project.kataru.ui.theme.KataruTheme
 import com.project.kataru.ui.theme.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -317,6 +320,105 @@ class MainActivity : ComponentActivity() {
                                         val isGridView by viewModel.isGridView.collectAsState()
                                         val activeBookProgress by viewModel.activeBookProgress.collectAsState()
                                         val duration by viewModel.duration.collectAsState()
+                                        val localContext = LocalContext.current
+                                        
+                                        // PDF Conversion State
+                                        var showConversionDialog by remember { mutableStateOf(false) }
+                                        var pdfUriToConvert by remember { mutableStateOf<android.net.Uri?>(null) }
+                                        val conversionManager = remember { com.project.kataru.tts.PdfConversionManager(localContext) }
+                                        val conversionState by conversionManager.conversionState.collectAsState()
+                                        val scope = rememberCoroutineScope()
+                                        
+                                        // MP3 File Picker Launcher
+                                        val mp3PickerLauncher = rememberLauncherForActivityResult(
+                                            contract = ActivityResultContracts.OpenDocument()
+                                        ) { uri ->
+                                            uri?.let { selectedUri ->
+                                                // Copy file to source folder
+                                                val settingsManager = com.project.kataru.data.SettingsManager(localContext)
+                                                val sourceFolderUri = settingsManager.sourceFolderUri
+                                                if (sourceFolderUri != null) {
+                                                    try {
+                                                        val sourceFolder = androidx.documentfile.provider.DocumentFile.fromTreeUri(localContext, sourceFolderUri)
+                                                        if (sourceFolder != null && sourceFolder.canWrite()) {
+                                                            // Get the file name from the selected URI
+                                                            val cursor = localContext.contentResolver.query(selectedUri, null, null, null, null)
+                                                            var fileName = "uploaded_audio.mp3"
+                                                            cursor?.use {
+                                                                if (it.moveToFirst()) {
+                                                                    val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                                                    if (nameIndex >= 0) {
+                                                                        fileName = it.getString(nameIndex)
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                            // Create new file in source folder
+                                                            val newFile = sourceFolder.createFile("audio/mpeg", fileName)
+                                                            if (newFile != null) {
+                                                                // Copy content
+                                                                localContext.contentResolver.openInputStream(selectedUri)?.use { input ->
+                                                                    localContext.contentResolver.openOutputStream(newFile.uri)?.use { output ->
+                                                                        input.copyTo(output)
+                                                                    }
+                                                                }
+                                                                // Refresh library
+                                                                viewModel.loadAudioBooks()
+                                                                android.widget.Toast.makeText(localContext, "MP3 uploaded successfully!", android.widget.Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        } else {
+                                                            android.widget.Toast.makeText(localContext, "Cannot write to source folder", android.widget.Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                        android.widget.Toast.makeText(localContext, "Error uploading file: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    android.widget.Toast.makeText(localContext, "Please set a source folder in Settings first", android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                        
+                                        // PDF File Picker Launcher
+                                        val pdfPickerLauncher = rememberLauncherForActivityResult(
+                                            contract = ActivityResultContracts.OpenDocument()
+                                        ) { uri ->
+                                            uri?.let { selectedUri ->
+                                                val settingsManager = com.project.kataru.data.SettingsManager(localContext)
+                                                val sourceFolderUri = settingsManager.sourceFolderUri
+                                                if (sourceFolderUri != null) {
+                                                    pdfUriToConvert = selectedUri
+                                                    showConversionDialog = true
+                                                    // Start conversion
+                                                    scope.launch {
+                                                        conversionManager.convertPdfToAudio(selectedUri, sourceFolderUri)
+                                                        // Refresh library on success
+                                                        if (conversionState is com.project.kataru.tts.PdfConversionManager.ConversionState.Success) {
+                                                            viewModel.loadAudioBooks()
+                                                        }
+                                                    }
+                                                } else {
+                                                    android.widget.Toast.makeText(localContext, "Please set a source folder in Settings first", android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                        
+                                        // PDF Conversion Dialog
+                                        if (showConversionDialog) {
+                                            PdfConversionDialog(
+                                                state = conversionState,
+                                                onDismiss = {
+                                                    showConversionDialog = false
+                                                    conversionManager.reset()
+                                                    // Refresh library after conversion
+                                                    viewModel.loadAudioBooks()
+                                                },
+                                                onCancel = {
+                                                    showConversionDialog = false
+                                                    conversionManager.reset()
+                                                }
+                                            )
+                                        }
 
                                         LibraryScreen(
                                             audioBooks = audioBooks,
@@ -358,6 +460,12 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 }
                                                 showPlayer = true 
+                                            },
+                                            onUploadMp3 = {
+                                                mp3PickerLauncher.launch(arrayOf("audio/*"))
+                                            },
+                                            onUploadPdf = {
+                                                pdfPickerLauncher.launch(arrayOf("application/pdf"))
                                             }
                                         )
                                     }
