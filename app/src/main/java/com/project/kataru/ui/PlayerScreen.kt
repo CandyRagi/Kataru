@@ -304,7 +304,7 @@ fun PlayerScreen(
                         ),
                         shape = CircleShape
                     )
-                    .clickable { isLocked = !isLocked },
+                    .hapticClickable { isLocked = !isLocked },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -335,7 +335,7 @@ fun PlayerScreen(
                                 ),
                                 shape = CircleShape
                             )
-                            .clickable(enabled = !isLocked) { showVolumeSheet = true },
+                            .hapticClickable(enabled = !isLocked) { showVolumeSheet = true },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -365,7 +365,7 @@ fun PlayerScreen(
                                 ),
                                 shape = RoundedCornerShape(20.dp)
                             )
-                            .clickable(enabled = !isLocked) { showSpeedSheet = true }
+                            .hapticClickable(enabled = !isLocked) { showSpeedSheet = true }
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -602,9 +602,8 @@ private fun DynamicSkipButton(
             .clip(CircleShape)
             .background(SurfaceGlass.copy(alpha = 0.5f))
             .border(1.dp, CardBorder, CircleShape)
-            .clickable(
+            .hapticClickableNoIndication(
                 interactionSource = interactionSource,
-                indication = null,
                 enabled = enabled,
                 onClick = onClick
             ),
@@ -665,9 +664,8 @@ private fun PlayerControlButton(
             .clip(CircleShape)
             .background(SurfaceGlass.copy(alpha = 0.5f))
             .border(1.dp, CardBorder, CircleShape)
-            .clickable(
+            .hapticClickableNoIndication(
                 interactionSource = interactionSource,
-                indication = null,
                 enabled = enabled,
                 onClick = onClick
             ),
@@ -700,41 +698,7 @@ private fun PlayPauseButton(
         label = "playScale"
     )
     
-    // Glow animation when playing
-    val infiniteTransition = rememberInfiniteTransition(label = "playGlow")
-    val glowScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowScale"
-    )
 
-    Box(
-        modifier = Modifier.size(76.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Animated glow ring when playing
-        if (isPlaying) {
-            Box(
-                modifier = Modifier
-                    .size(76.dp)
-                    .scale(glowScale)
-                    .alpha(0.4f)
-                    .blur(12.dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-            )
-        }
         
         Box(
             modifier = Modifier
@@ -760,9 +724,8 @@ private fun PlayPauseButton(
                     ),
                     shape = CircleShape
                 )
-                .clickable(
+                .hapticClickableNoIndication(
                     interactionSource = interactionSource,
-                    indication = null,
                     enabled = enabled,
                     onClick = onClick
                 ),
@@ -776,7 +739,7 @@ private fun PlayPauseButton(
             )
         }
     }
-}
+
 
 private fun formatTime(millis: Long): String {
     val totalSeconds = millis / 1000

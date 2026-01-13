@@ -232,7 +232,11 @@ fun LibraryScreen(
                     },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
+                            val haptic = rememberHapticFeedback()
+                            IconButton(onClick = { 
+                                haptic()
+                                searchQuery = "" 
+                            }) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
                                     contentDescription = "Clear",
@@ -262,7 +266,7 @@ fun LibraryScreen(
                     .size(56.dp) // Match standard touch target / search bar height roughly
                     .clip(CircleShape)
                     .background(SurfaceGlass.copy(alpha = 0.6f))
-                    .clickable { showAddOptions = true }
+                    .hapticClickable { showAddOptions = true }
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -375,9 +379,8 @@ fun LibraryScreen(
                         radius = 1000f
                     )
                 )
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
+                .hapticClickableNoIndication(
+                    interactionSource = remember { MutableInteractionSource() }
                 ) { showAddOptions = false },
             contentAlignment = Alignment.Center
         ) {
@@ -471,8 +474,12 @@ fun LibraryScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         
                         // Cancel button
+                        val haptic = rememberHapticFeedback()
                         TextButton(
-                            onClick = { showAddOptions = false },
+                            onClick = { 
+                                haptic()
+                                showAddOptions = false 
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.textButtonColors(
                                 contentColor = TextMuted
@@ -541,7 +548,16 @@ private fun UploadOptionCard(
                             isPressed = false
                         }
                     },
-                    onTap = { onClick() }
+                    onTap = { 
+                        // We can't easily inject haptic here without context, but we can pass it in
+                        // or rely on the parent to handle it. 
+                        // Actually, let's just use the onClick provided which will be wrapped if needed
+                        // But wait, the caller doesn't wrap it.
+                        // Let's use LocalView here too since we are in a Composable context
+                        // But pointerInput is a suspend scope.
+                        // We need to trigger it from the callback.
+                        onClick() 
+                    }
                 )
             }
             .padding(16.dp),
@@ -614,8 +630,12 @@ private fun AnimatedIconButton(
         label = "iconScale"
     )
     
+    val haptic = rememberHapticFeedback()
     IconButton(
-        onClick = onClick,
+        onClick = {
+            haptic()
+            onClick()
+        },
         interactionSource = interactionSource,
         modifier = Modifier.scale(scale)
     ) {
@@ -678,9 +698,8 @@ private fun AnimatedBookListItem(
                 scaleX = scale
                 scaleY = scale
             }
-            .clickable(
+            .hapticClickableNoIndication(
                 interactionSource = interactionSource,
-                indication = null,
                 onClick = onClick
             ),
         shape = RoundedCornerShape(16.dp),

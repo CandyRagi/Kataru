@@ -74,17 +74,7 @@ fun MiniPlayer(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Pulsing glow animation when playing
-    val infiniteTransition = rememberInfiniteTransition(label = "miniPlayerGlow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowPulse"
-    )
+
     
     val playButtonScale by animateFloatAsState(
         targetValue = if (isPlaying) 1f else 0.95f,
@@ -123,7 +113,7 @@ fun MiniPlayer(
                 ),
                 shape = RoundedCornerShape(0.dp)
             )
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
     ) {
             Column(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
@@ -198,9 +188,8 @@ fun MiniPlayer(
                                         ),
                                         shape = CircleShape
                                     )
-                                    .clickable(
+                                    .hapticClickableNoIndication(
                                         interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
                                         onClick = onPlayPauseClick
                                     ),
                                 contentAlignment = Alignment.Center
