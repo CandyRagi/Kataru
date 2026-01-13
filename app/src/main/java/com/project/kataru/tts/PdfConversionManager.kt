@@ -9,11 +9,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 
 /*
  * PdfConversionManager - Orchestrates the entire PDF to audio conversion process.
  * Handles PDF extraction, TTS conversion, and audio file writing.
- * Provides state updates for UI progress display.
+ * Uses streaming approach to handle large documents without memory issues.
  */
 
 class PdfConversionManager(private val context: Context) {
@@ -30,7 +31,8 @@ class PdfConversionManager(private val context: Context) {
 
     sealed class ConversionState {
         object Idle : ConversionState()
-        object Initializing : ConversionState()
+        object CheckingModel : ConversionState()
+        data class DownloadingModel(val progress: Int) : ConversionState()
         data class ExtractingText(val currentPage: Int, val totalPages: Int) : ConversionState()
         data class GeneratingAudio(val progress: Int) : ConversionState()
         object WritingFile : ConversionState()
@@ -38,26 +40,34 @@ class PdfConversionManager(private val context: Context) {
         data class Error(val message: String) : ConversionState()
     }
 
-    /**
-     * Convert a PDF file to audio and save to source folder
-     */
     suspend fun convertPdfToAudio(
         pdfUri: Uri,
         sourceFolderUri: Uri
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            _conversionState.value = ConversionState.Initializing
+            _conversionState.value = ConversionState.CheckingModel
 
-            // Step 1: Initialize TTS
+            // Initialize TTS
             if (!ttsService.initialize()) {
-                _conversionState.value = ConversionState.Error("Failed to initialize TTS engine. Please check your device's TTS settings.")
+                _conversionState.value = ConversionState.Error("Failed to initialize TTS engine")
                 return@withContext false
             }
 
-            // Step 2: Extract text from PDF
-            val fileName = pdfExtractor.getFileName(pdfUri)
-            val text = pdfExtractor.extractText(pdfUri) { current, total ->
-                _conversionState.value = ConversionState.ExtractingText(current, total)
+            // Extract text from PDF
+            val fileName = try {
+                pdfExtractor.getFileName(pdfUri).removeSuffix(".pdf") + ".wav"
+            } catch (e: Exception) {
+                "audiobook.wav"
+            }
+
+            val text = try {
+                pdfExtractor.extractText(pdfUri) { current, total ->
+                    _conversionState.value = ConversionState.ExtractingText(current, total)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to extract text: ${e.message}")
+                _conversionState.value = ConversionState.Error("Failed to read PDF: ${e.message}")
+                return@withContext false
             }
 
             if (text.isBlank()) {
@@ -67,54 +77,37 @@ class PdfConversionManager(private val context: Context) {
 
             Log.d(TAG, "Extracted ${text.length} characters from PDF")
 
-            // Step 3: Generate audio using Android TTS
-            _conversionState.value = ConversionState.GeneratingAudio(0)
+            // Generate audio directly to a temp file
+            val tempFile = File(context.cacheDir, "temp_audio_$${System.currentTimeMillis()}.wav")
             
-            // Create temp file for TTS output
-            val tempFile = File(context.cacheDir, "tts_temp_${System.currentTimeMillis()}.wav")
-            
-            val success = ttsService.synthesizeToFile(
+            val success = ttsService.generateAudioToFile(
                 text = text,
                 outputFile = tempFile
-            ) { progress ->
+            ) { processed, total ->
+                val progress = (processed * 100) / total
                 _conversionState.value = ConversionState.GeneratingAudio(progress)
             }
 
             if (!success || !tempFile.exists()) {
                 _conversionState.value = ConversionState.Error("Failed to generate audio")
-                tempFile.delete()
                 return@withContext false
             }
 
             Log.d(TAG, "Generated audio file: ${tempFile.length()} bytes")
 
-            // Step 4: Copy to source folder
+            // Copy to source folder
             _conversionState.value = ConversionState.WritingFile
+            val outputUri = copyToSourceFolder(tempFile, sourceFolderUri, fileName)
             
-            val sourceFolder = DocumentFile.fromTreeUri(context, sourceFolderUri)
-            if (sourceFolder == null || !sourceFolder.canWrite()) {
-                _conversionState.value = ConversionState.Error("Cannot write to source folder")
-                tempFile.delete()
-                return@withContext false
-            }
+            // Cleanup temp file
+            tempFile.delete()
 
-            val sanitizedName = sanitizeFileName(fileName)
-            val newFile = sourceFolder.createFile("audio/wav", "$sanitizedName.wav")
-            
-            if (newFile != null) {
-                context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
-                    tempFile.inputStream().use { input ->
-                        input.copyTo(output)
-                    }
-                }
-                tempFile.delete()
-                
+            if (outputUri != null) {
                 _conversionState.value = ConversionState.Success(fileName)
                 Log.i(TAG, "Successfully created audio file: $fileName")
                 true
             } else {
-                _conversionState.value = ConversionState.Error("Failed to create output file")
-                tempFile.delete()
+                _conversionState.value = ConversionState.Error("Failed to save audio file")
                 false
             }
         } catch (e: Exception) {
@@ -122,29 +115,40 @@ class PdfConversionManager(private val context: Context) {
             e.printStackTrace()
             _conversionState.value = ConversionState.Error("Conversion failed: ${e.message}")
             false
-        } finally {
-            ttsService.release()
+        }
+    }
+    
+    private fun copyToSourceFolder(sourceFile: File, sourceFolderUri: Uri, fileName: String): Uri? {
+        return try {
+            val sourceFolder = DocumentFile.fromTreeUri(context, sourceFolderUri)
+                ?: return null
+            
+            // Create new file in source folder
+            val newFile = sourceFolder.createFile("audio/wav", fileName)
+                ?: return null
+            
+            // Copy data
+            context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
+                FileInputStream(sourceFile).use { input ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                    }
+                }
+            }
+            
+            newFile.uri
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to copy to source folder: ${e.message}")
+            null
         }
     }
 
-    /**
-     * Sanitize filename for filesystem
-     */
-    private fun sanitizeFileName(name: String): String {
-        return name.replace(Regex("[^a-zA-Z0-9._\\-\\s]"), "_")
-            .take(100)
-    }
-
-    /**
-     * Reset conversion state to idle
-     */
     fun reset() {
         _conversionState.value = ConversionState.Idle
     }
 
-    /**
-     * Release resources
-     */
     fun release() {
         ttsService.release()
         reset()

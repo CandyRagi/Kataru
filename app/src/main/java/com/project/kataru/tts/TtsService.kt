@@ -9,14 +9,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 
 /*
- * TtsService - Text-to-Speech service using Android's built-in TTS engine.
- * Simpler and more reliable than external libraries. Uses device's installed
- * TTS engine (Google TTS, Samsung TTS, etc.)
+ * TtsService - Text-to-Speech service using Android's built-in TTS.
+ * Streams audio directly to file to avoid memory issues with large documents.
+ * Uses synthesizeToFile for each chunk, then concatenates them.
  */
 
 class TtsService(private val context: Context) {
@@ -26,196 +29,278 @@ class TtsService(private val context: Context) {
     
     companion object {
         private const val TAG = "TtsService"
+        private const val OUTPUT_DIR = "tts-output"
         const val SAMPLE_RATE = 22050
+        private const val MAX_CHUNK_SIZE = 3500
     }
 
-    /**
-     * Check if TTS is ready
-     */
     fun isReady(): Boolean = isInitialized
 
-    /**
-     * Initialize the TTS engine
-     * @return true if initialization successful
-     */
-    suspend fun initialize(): Boolean = suspendCancellableCoroutine { continuation ->
-        if (isInitialized && tts != null) {
-            continuation.resume(true)
-            return@suspendCancellableCoroutine
-        }
-
-        tts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val result = tts?.setLanguage(Locale.US)
-                isInitialized = result != TextToSpeech.LANG_MISSING_DATA && 
-                               result != TextToSpeech.LANG_NOT_SUPPORTED
-                
-                // Set speech rate for better audiobook quality
-                tts?.setSpeechRate(0.9f)
-                tts?.setPitch(1.0f)
-                
-                Log.i(TAG, "TTS initialized: $isInitialized, language result: $result")
-                continuation.resume(isInitialized)
-            } else {
-                Log.e(TAG, "TTS initialization failed with status: $status")
-                continuation.resume(false)
+    suspend fun initialize(): Boolean = withContext(Dispatchers.Main) {
+        if (isInitialized) return@withContext true
+        
+        suspendCancellableCoroutine { continuation ->
+            val resumed = AtomicBoolean(false)
+            
+            tts = TextToSpeech(context) { status ->
+                if (resumed.compareAndSet(false, true)) {
+                    if (status == TextToSpeech.SUCCESS) {
+                        val result = tts?.setLanguage(Locale.US)
+                        isInitialized = result != TextToSpeech.LANG_MISSING_DATA && 
+                                        result != TextToSpeech.LANG_NOT_SUPPORTED
+                        
+                        if (isInitialized) {
+                            Log.i(TAG, "Android TTS initialized successfully")
+                        } else {
+                            Log.e(TAG, "Language not supported: $result")
+                        }
+                        continuation.resume(isInitialized)
+                    } else {
+                        Log.e(TAG, "TTS initialization failed: $status")
+                        continuation.resume(false)
+                    }
+                }
+            }
+            
+            continuation.invokeOnCancellation {
+                if (resumed.compareAndSet(false, true)) {
+                    tts?.shutdown()
+                    tts = null
+                }
             }
         }
     }
 
     /**
-     * Synthesize text to a WAV file
-     * @param text Text to convert to speech
-     * @param outputFile Output file for the audio
-     * @param onProgress Callback with progress (0-100)
-     * @return true if synthesis was successful
+     * Generate audio and write directly to a WAV file
+     * Returns the path to the generated WAV file, or null on error
      */
-    suspend fun synthesizeToFile(
+    suspend fun generateAudioToFile(
         text: String,
         outputFile: File,
-        onProgress: ((progress: Int) -> Unit)? = null
+        onProgress: ((processed: Int, total: Int) -> Unit)? = null
     ): Boolean = withContext(Dispatchers.IO) {
         if (!isInitialized || tts == null) {
             Log.e(TAG, "TTS not initialized")
             return@withContext false
         }
 
-        // Clean text for TTS (remove special characters that might cause issues)
-        val cleanedText = cleanTextForTts(text)
-        if (cleanedText.isBlank()) {
-            Log.e(TAG, "No text to synthesize after cleaning")
-            return@withContext false
-        }
-
-        // Make sure parent directory exists
-        outputFile.parentFile?.mkdirs()
-        
-        // Delete existing file if it exists
-        if (outputFile.exists()) {
-            outputFile.delete()
-        }
-
-        Log.d(TAG, "Synthesizing ${cleanedText.length} chars to ${outputFile.absolutePath}")
-
-        suspendCancellableCoroutine { continuation ->
-            val utteranceId = "tts_${System.currentTimeMillis()}"
-            val hasResumed = AtomicBoolean(false)
+        try {
+            val tempDir = File(context.cacheDir, OUTPUT_DIR)
+            tempDir.mkdirs()
             
-            val progressListener = object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {
-                    Log.d(TAG, "TTS started: $utteranceId")
-                    onProgress?.invoke(10)
+            val cleanedText = cleanTextForTts(text)
+            val chunks = splitIntoChunks(cleanedText)
+            val chunkFiles = mutableListOf<File>()
+            var processedChars = 0
+            
+            // Generate audio for each chunk
+            for ((index, chunk) in chunks.withIndex()) {
+                val tempFile = File(tempDir, "chunk_$index.wav")
+                
+                val success = synthesizeChunk(chunk, tempFile)
+                
+                if (success && tempFile.exists() && tempFile.length() > 44) {
+                    chunkFiles.add(tempFile)
+                } else {
+                    Log.w(TAG, "Failed to synthesize chunk $index")
                 }
-
-                override fun onDone(utteranceId: String?) {
-                    Log.i(TAG, "TTS synthesis complete: $utteranceId")
-                    onProgress?.invoke(100)
-                    if (hasResumed.compareAndSet(false, true)) {
-                        continuation.resume(true)
-                    }
-                }
-
-                @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) {
-                    Log.e(TAG, "TTS error (deprecated) for: $utteranceId")
-                    if (hasResumed.compareAndSet(false, true)) {
-                        continuation.resume(false)
-                    }
-                }
-
-                override fun onError(utteranceId: String?, errorCode: Int) {
-                    Log.e(TAG, "TTS error: $errorCode for: $utteranceId")
-                    if (hasResumed.compareAndSet(false, true)) {
-                        continuation.resume(false)
-                    }
-                }
+                
+                processedChars += chunk.length
+                onProgress?.invoke(processedChars, cleanedText.length)
             }
             
-            tts?.setOnUtteranceProgressListener(progressListener)
-            
-            // Prepare parameters
-            val params = Bundle().apply {
-                putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+            if (chunkFiles.isEmpty()) {
+                Log.e(TAG, "No audio chunks generated")
+                return@withContext false
             }
             
-            // Limit text length - Android TTS has a limit of ~4000 characters per utterance
-            val textToSynthesize = if (cleanedText.length > 4000) {
-                Log.w(TAG, "Text too long (${cleanedText.length}), truncating to 4000 chars")
-                cleanedText.take(4000)
-            } else {
-                cleanedText
-            }
+            // Concatenate all chunk files into the output file
+            concatenateWavFiles(chunkFiles, outputFile)
             
-            onProgress?.invoke(5)
+            // Cleanup temp files
+            chunkFiles.forEach { it.delete() }
             
-            val result = tts?.synthesizeToFile(textToSynthesize, params, outputFile, utteranceId)
-            Log.d(TAG, "synthesizeToFile called, result: $result")
-            
-            if (result != TextToSpeech.SUCCESS) {
-                Log.e(TAG, "synthesizeToFile failed with result: $result")
-                if (hasResumed.compareAndSet(false, true)) {
-                    continuation.resume(false)
-                }
-            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate audio: ${e.message}")
+            e.printStackTrace()
+            false
         }
     }
-
-    /**
-     * Clean text for TTS - remove problematic characters
-     */
+    
     private fun cleanTextForTts(text: String): String {
         return text
-            .replace(Regex("[\\x00-\\x1F]"), " ") // Remove control characters
-            .replace(Regex("\\s+"), " ") // Collapse multiple spaces
-            .replace("\"", "") // Remove quotes that might cause issues
-            .replace("\n", ". ") // Replace newlines with periods for natural pauses
-            .replace("\r", " ")
-            .replace("\t", " ")
+            .replace(Regex("[\\x00-\\x1F\\x7F]"), " ")
+            .replace(Regex("\\s+"), " ")
             .trim()
     }
-
-    /**
-     * Get available TTS engines on the device
-     */
-    fun getAvailableEngines(): List<TextToSpeech.EngineInfo> {
-        return tts?.engines ?: emptyList()
-    }
-
-    /**
-     * Set speech rate (0.5 = half speed, 2.0 = double speed)
-     */
-    fun setSpeechRate(rate: Float) {
-        tts?.setSpeechRate(rate.coerceIn(0.5f, 2.0f))
-    }
-
-    /**
-     * Set pitch (0.5 = lower pitch, 2.0 = higher pitch)
-     */
-    fun setPitch(pitch: Float) {
-        tts?.setPitch(pitch.coerceIn(0.5f, 2.0f))
-    }
-
-    /**
-     * Release TTS resources
-     */
-    fun release() {
-        try {
-            tts?.stop()
-            tts?.shutdown()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing TTS: ${e.message}")
+    
+    private fun splitIntoChunks(text: String): List<String> {
+        val chunks = mutableListOf<String>()
+        var remaining = text
+        
+        while (remaining.isNotEmpty()) {
+            if (remaining.length <= MAX_CHUNK_SIZE) {
+                chunks.add(remaining)
+                break
+            }
+            
+            var breakPoint = remaining.lastIndexOf(". ", MAX_CHUNK_SIZE)
+            if (breakPoint < MAX_CHUNK_SIZE / 2) {
+                breakPoint = remaining.lastIndexOf(", ", MAX_CHUNK_SIZE)
+            }
+            if (breakPoint < MAX_CHUNK_SIZE / 2) {
+                breakPoint = remaining.lastIndexOf(" ", MAX_CHUNK_SIZE)
+            }
+            if (breakPoint < MAX_CHUNK_SIZE / 2) {
+                breakPoint = MAX_CHUNK_SIZE
+            }
+            
+            chunks.add(remaining.substring(0, breakPoint + 1))
+            remaining = remaining.substring(breakPoint + 1)
         }
+        
+        return chunks
+    }
+    
+    private suspend fun synthesizeChunk(text: String, outputFile: File): Boolean = 
+        withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { continuation ->
+                val resumed = AtomicBoolean(false)
+                val utteranceId = "chunk_${System.currentTimeMillis()}"
+                
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(id: String?) {}
+                    
+                    override fun onDone(id: String?) {
+                        if (id == utteranceId && resumed.compareAndSet(false, true)) {
+                            continuation.resume(true)
+                        }
+                    }
+                    
+                    override fun onError(id: String?) {
+                        if (id == utteranceId && resumed.compareAndSet(false, true)) {
+                            Log.e(TAG, "TTS error for chunk")
+                            continuation.resume(false)
+                        }
+                    }
+                    
+                    @Deprecated("Deprecated in API")
+                    override fun onError(utteranceId: String?, errorCode: Int) {
+                        if (utteranceId == utteranceId && resumed.compareAndSet(false, true)) {
+                            Log.e(TAG, "TTS error code: $errorCode")
+                            continuation.resume(false)
+                        }
+                    }
+                })
+                
+                val params = Bundle()
+                val result = tts?.synthesizeToFile(text, params, outputFile, utteranceId)
+                
+                if (result != TextToSpeech.SUCCESS) {
+                    if (resumed.compareAndSet(false, true)) {
+                        Log.e(TAG, "synthesizeToFile failed: $result")
+                        continuation.resume(false)
+                    }
+                }
+                
+                continuation.invokeOnCancellation {
+                    if (resumed.compareAndSet(false, true)) {
+                        tts?.stop()
+                    }
+                }
+            }
+        }
+    
+    /**
+     * Concatenate multiple WAV files into one output file
+     * Streams data directly to avoid memory issues
+     */
+    private fun concatenateWavFiles(inputFiles: List<File>, outputFile: File) {
+        // Calculate total data size
+        var totalDataSize = 0
+        var sampleRate = 22050
+        var bitsPerSample = 16
+        var numChannels = 1
+        
+        for (file in inputFiles) {
+            RandomAccessFile(file, "r").use { raf ->
+                // Read WAV header info from first file
+                if (file == inputFiles.first()) {
+                    raf.seek(22)
+                    numChannels = (raf.readByte().toInt() and 0xFF) or ((raf.readByte().toInt() and 0xFF) shl 8)
+                    sampleRate = (raf.readByte().toInt() and 0xFF) or 
+                                 ((raf.readByte().toInt() and 0xFF) shl 8) or
+                                 ((raf.readByte().toInt() and 0xFF) shl 16) or
+                                 ((raf.readByte().toInt() and 0xFF) shl 24)
+                    raf.seek(34)
+                    bitsPerSample = (raf.readByte().toInt() and 0xFF) or ((raf.readByte().toInt() and 0xFF) shl 8)
+                }
+                totalDataSize += (file.length() - 44).toInt()
+            }
+        }
+        
+        // Write output file with proper header
+        FileOutputStream(outputFile).use { fos ->
+            // WAV header
+            val byteRate = sampleRate * numChannels * bitsPerSample / 8
+            val blockAlign = numChannels * bitsPerSample / 8
+            
+            fos.write("RIFF".toByteArray())
+            fos.write(intToBytes(36 + totalDataSize))
+            fos.write("WAVE".toByteArray())
+            fos.write("fmt ".toByteArray())
+            fos.write(intToBytes(16)) // Subchunk1Size
+            fos.write(shortToBytes(1)) // AudioFormat (PCM)
+            fos.write(shortToBytes(numChannels))
+            fos.write(intToBytes(sampleRate))
+            fos.write(intToBytes(byteRate))
+            fos.write(shortToBytes(blockAlign))
+            fos.write(shortToBytes(bitsPerSample))
+            fos.write("data".toByteArray())
+            fos.write(intToBytes(totalDataSize))
+            
+            // Append audio data from each file
+            val buffer = ByteArray(8192)
+            for (file in inputFiles) {
+                FileInputStream(file).use { fis ->
+                    fis.skip(44) // Skip WAV header
+                    var bytesRead: Int
+                    while (fis.read(buffer).also { bytesRead = it } != -1) {
+                        fos.write(buffer, 0, bytesRead)
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun intToBytes(value: Int): ByteArray {
+        return byteArrayOf(
+            (value and 0xFF).toByte(),
+            ((value shr 8) and 0xFF).toByte(),
+            ((value shr 16) and 0xFF).toByte(),
+            ((value shr 24) and 0xFF).toByte()
+        )
+    }
+    
+    private fun shortToBytes(value: Int): ByteArray {
+        return byteArrayOf(
+            (value and 0xFF).toByte(),
+            ((value shr 8) and 0xFF).toByte()
+        )
+    }
+
+    fun getSampleRate(): Int = SAMPLE_RATE
+
+    fun release() {
+        tts?.stop()
+        tts?.shutdown()
         tts = null
         isInitialized = false
     }
 
-    /**
-     * TTS is always "downloaded" since it uses device's built-in engine
-     */
     fun isModelDownloaded(): Boolean = true
 
-    /**
-     * Get sample rate (not directly available from Android TTS, using default)
-     */
-    fun getSampleRate(): Int = SAMPLE_RATE
+    fun getModelDir(): File = File(context.filesDir, OUTPUT_DIR)
 }

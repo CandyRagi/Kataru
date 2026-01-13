@@ -391,10 +391,15 @@ class MainActivity : ComponentActivity() {
                                                     showConversionDialog = true
                                                     // Start conversion
                                                     scope.launch {
-                                                        conversionManager.convertPdfToAudio(selectedUri, sourceFolderUri)
-                                                        // Refresh library on success
-                                                        if (conversionState is com.project.kataru.tts.PdfConversionManager.ConversionState.Success) {
-                                                            viewModel.loadAudioBooks()
+                                                        try {
+                                                            conversionManager.convertPdfToAudio(selectedUri, sourceFolderUri)
+                                                            // Refresh library on success
+                                                            if (conversionState is com.project.kataru.tts.PdfConversionManager.ConversionState.Success) {
+                                                                viewModel.loadAudioBooks()
+                                                            }
+                                                        } catch (e: Exception) {
+                                                            e.printStackTrace()
+                                                            android.widget.Toast.makeText(localContext, "Error starting conversion: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
                                                         }
                                                     }
                                                 } else {

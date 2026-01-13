@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -33,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Clear
@@ -42,12 +45,14 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +77,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.project.kataru.R
@@ -107,6 +115,7 @@ fun LibraryScreen(
     onMiniPlayerClick: () -> Unit,
     onUploadMp3: () -> Unit,
     onUploadPdf: () -> Unit,
+    accentColor: Color = AccentPrimary,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -342,65 +351,140 @@ fun LibraryScreen(
         }
     }
 
-    // Glassmorphic Overlay for Add Options
+    // Premium Glassmorphic Upload Overlay
     AnimatedVisibility(
         visible = showAddOptions,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = fadeIn(animationSpec = tween(200)) + scaleIn(
+            initialScale = 0.9f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        ),
+        exit = fadeOut(animationSpec = tween(150)) + scaleOut(targetScale = 0.95f)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
-                .clickable { showAddOptions = false },
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.7f),
+                            Color.Black.copy(alpha = 0.85f)
+                        ),
+                        radius = 1000f
+                    )
+                )
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { showAddOptions = false },
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .padding(32.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(SurfaceCard)
-                    .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { /* Prevent closing when clicking inside */ }
-                    .padding(24.dp)
+            // Animated card with glassmorphic effect
+            AnimatedVisibility(
+                visible = showAddOptions,
+                enter = slideInVertically(
+                    initialOffsetY = { it / 4 },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ) + fadeIn(animationSpec = tween(300, delayMillis = 100)),
+                exit = slideOutVertically(targetOffsetY = { it / 4 }) + fadeOut()
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 32.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF1A1A1F),
+                                    Color(0xFF121215)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.White.copy(alpha = 0.04f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { /* Prevent closing */ }
+                        .padding(24.dp)
                 ) {
-                    Text(
-                        text = "Add Content",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Upload MP3 Option
-                    UploadOptionItem(
-                        icon = Icons.Default.AudioFile,
-                        title = "Upload MP3",
-                        description = "Import audio files directly",
-                        onClick = { 
-                            onUploadMp3()
-                            showAddOptions = false 
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        // Header with subtle animation
+                        Text(
+                            text = "Add Content",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        
+                        Text(
+                            text = "Choose how to add your audiobook",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        // Upload Options with staggered animation
+                        UploadOptionCard(
+                            icon = Icons.Default.AudioFile,
+                            title = "Upload MP3",
+                            description = "Import audio files directly",
+                            accentColor = accentColor,
+                            animationDelay = 0,
+                            onClick = { 
+                                onUploadMp3()
+                                showAddOptions = false 
+                            }
+                        )
+                        
+                        UploadOptionCard(
+                            icon = Icons.Default.PictureAsPdf,
+                            title = "Convert PDF",
+                            description = "Transform documents to audio",
+                            accentColor = accentColor,
+                            animationDelay = 50,
+                            onClick = { 
+                                onUploadPdf()
+                                showAddOptions = false 
+                            }
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        // Cancel button
+                        TextButton(
+                            onClick = { showAddOptions = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = TextMuted
+                            )
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
-                    )
-                    
-                    // Upload PDF Option
-                    UploadOptionItem(
-                        icon = Icons.Default.PictureAsPdf,
-                        title = "Upload PDF",
-                        description = "Convert PDF to audiobook",
-                        onClick = { 
-                            onUploadPdf()
-                            showAddOptions = false 
-                        }
-                    )
+                    }
                 }
             }
         }
@@ -408,39 +492,87 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun UploadOptionItem(
+private fun UploadOptionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     description: String,
+    accentColor: Color,
+    animationDelay: Int,
     onClick: () -> Unit
 ) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "scale"
+    )
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceDark.copy(alpha = 0.5f))
-            .clickable(onClick = onClick)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF1E1E24),
+                        Color(0xFF1A1A20)
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.06f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isPressed = true
+                        try {
+                            awaitRelease()
+                        } finally {
+                            isPressed = false
+                        }
+                    },
+                    onTap = { onClick() }
+                )
+            }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Animated icon with glow
         Box(
             modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(AccentPrimary.copy(alpha = 0.1f)),
+                .size(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = 0.15f),
+                            accentColor.copy(alpha = 0.05f)
+                        )
+                    )
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = AccentPrimary,
-                modifier = Modifier.size(24.dp)
+                tint = accentColor,
+                modifier = Modifier.size(26.dp)
             )
         }
         
         Spacer(modifier = Modifier.width(16.dp))
         
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -450,9 +582,17 @@ private fun UploadOptionItem(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = TextMuted
             )
         }
+        
+        // Arrow indicator
+        Icon(
+            imageVector = Icons.Default.ArrowForward,
+            contentDescription = null,
+            tint = TextMuted.copy(alpha = 0.5f),
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 
