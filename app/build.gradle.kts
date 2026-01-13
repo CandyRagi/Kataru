@@ -48,6 +48,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
@@ -81,11 +84,8 @@ dependencies {
     // PDF Text Extraction
     implementation(libs.pdfbox.android)
     
-    // Sherpa-ONNX TTS (AAR from libs folder)
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
-    
-    // Apache Commons Compress for tar.bz2 extraction
-    implementation("org.apache.commons:commons-compress:1.26.0")
+    // Sherpa-ONNX TTS removed
+    // Apache Commons Compress removed
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

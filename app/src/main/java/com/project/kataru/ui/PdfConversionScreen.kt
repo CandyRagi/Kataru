@@ -268,8 +268,6 @@ fun PdfConversionDialog(
 private fun getStatusMessage(state: ConversionState): String {
     return when (state) {
         is ConversionState.Idle -> "Preparing..."
-        is ConversionState.CheckingModel -> "Initializing TTS..."
-        is ConversionState.DownloadingModel -> "Preparing voice..."
         is ConversionState.ExtractingText -> "Extracting text from PDF..."
         is ConversionState.GeneratingAudio -> "Generating speech..."
         is ConversionState.WritingFile -> "Saving audio file..."
