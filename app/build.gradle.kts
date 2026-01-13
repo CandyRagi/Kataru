@@ -83,6 +83,9 @@ dependencies {
     
     // Sherpa-ONNX TTS (AAR from libs folder)
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    
+    // Apache Commons Compress for tar.bz2 extraction
+    implementation("org.apache.commons:commons-compress:1.26.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -1,83 +1,101 @@
 package com.project.kataru.tts
 
 import android.content.Context
-import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import com.k2fsa.sherpa.onnx.OfflineTts
+import com.k2fsa.sherpa.onnx.OfflineTtsConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.RandomAccessFile
-import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
 
 /*
- * TtsService - Text-to-Speech service using Android's built-in TTS.
- * Streams audio directly to file to avoid memory issues with large documents.
- * Uses synthesizeToFile for each chunk, then concatenates them.
+ * TtsService - Text-to-Speech service using Sherpa-ONNX with VITS-VCTK model.
+ * Uses official pre-packaged model with 109 speakers (male and female).
+ * Streams audio directly to file to avoid memory issues.
  */
 
 class TtsService(private val context: Context) {
 
-    private var tts: TextToSpeech? = null
+    private var tts: OfflineTts? = null
     private var isInitialized = false
     
     companion object {
         private const val TAG = "TtsService"
-        private const val OUTPUT_DIR = "tts-output"
+        private const val MODEL_DIR = "vits-vctk"
         const val SAMPLE_RATE = 22050
-        private const val MAX_CHUNK_SIZE = 3500
+        const val NUM_SPEAKERS = 109 // VCTK has 109 speakers
     }
 
     fun isReady(): Boolean = isInitialized
 
-    suspend fun initialize(): Boolean = withContext(Dispatchers.Main) {
-        if (isInitialized) return@withContext true
-        
-        suspendCancellableCoroutine { continuation ->
-            val resumed = AtomicBoolean(false)
-            
-            tts = TextToSpeech(context) { status ->
-                if (resumed.compareAndSet(false, true)) {
-                    if (status == TextToSpeech.SUCCESS) {
-                        val result = tts?.setLanguage(Locale.US)
-                        isInitialized = result != TextToSpeech.LANG_MISSING_DATA && 
-                                        result != TextToSpeech.LANG_NOT_SUPPORTED
-                        
-                        if (isInitialized) {
-                            Log.i(TAG, "Android TTS initialized successfully")
-                        } else {
-                            Log.e(TAG, "Language not supported: $result")
-                        }
-                        continuation.resume(isInitialized)
-                    } else {
-                        Log.e(TAG, "TTS initialization failed: $status")
-                        continuation.resume(false)
-                    }
+    /**
+     * Initialize the TTS engine with VITS-VCTK model
+     */
+    suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
+        synchronized(this@TtsService) {
+            if (isInitialized) return@synchronized true
+
+            try {
+                val modelDir = File(context.filesDir, MODEL_DIR)
+                
+                // Check if all model files exist
+                val modelFile = File(modelDir, "vits-vctk.onnx")
+                val tokensFile = File(modelDir, "tokens.txt")
+                val lexiconFile = File(modelDir, "lexicon.txt")
+                
+                if (!modelFile.exists() || !tokensFile.exists() || !lexiconFile.exists()) {
+                    Log.e(TAG, "TTS model files not found. Please download the model first.")
+                    return@synchronized false
                 }
-            }
-            
-            continuation.invokeOnCancellation {
-                if (resumed.compareAndSet(false, true)) {
-                    tts?.shutdown()
-                    tts = null
-                }
+
+                val vitsModelConfig = OfflineTtsVitsModelConfig(
+                    model = modelFile.absolutePath,
+                    tokens = tokensFile.absolutePath,
+                    lexicon = lexiconFile.absolutePath,
+                    noiseScale = 0.667f,
+                    noiseScaleW = 0.8f,
+                    lengthScale = 1.0f
+                )
+
+                val modelConfig = OfflineTtsModelConfig(
+                    vits = vitsModelConfig,
+                    numThreads = 2,
+                    debug = false,
+                    provider = "cpu"
+                )
+
+                val config = OfflineTtsConfig(
+                    model = modelConfig,
+                    maxNumSentences = 1
+                )
+
+                // Initialize with null AssetManager for filesystem models
+                tts = OfflineTts(assetManager = null, config = config)
+                
+                isInitialized = true
+                Log.i(TAG, "Sherpa-ONNX TTS initialized with VCTK model (${NUM_SPEAKERS} speakers)")
+                true
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to initialize TTS: ${e.message}")
+                e.printStackTrace()
+                false
             }
         }
     }
 
     /**
      * Generate audio and write directly to a WAV file
-     * Returns the path to the generated WAV file, or null on error
+     * @param speakerId Speaker ID from 0-108 (different male/female voices)
      */
     suspend fun generateAudioToFile(
         text: String,
         outputFile: File,
+        speakerId: Int = 0,
+        speed: Float = 1.0f,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null
     ): Boolean = withContext(Dispatchers.IO) {
         if (!isInitialized || tts == null) {
@@ -86,7 +104,7 @@ class TtsService(private val context: Context) {
         }
 
         try {
-            val tempDir = File(context.cacheDir, OUTPUT_DIR)
+            val tempDir = File(context.cacheDir, "tts-chunks")
             tempDir.mkdirs()
             
             val cleanedText = cleanTextForTts(text)
@@ -98,12 +116,29 @@ class TtsService(private val context: Context) {
             for ((index, chunk) in chunks.withIndex()) {
                 val tempFile = File(tempDir, "chunk_$index.wav")
                 
-                val success = synthesizeChunk(chunk, tempFile)
+                val success = synchronized(this@TtsService) {
+                    if (!isInitialized || tts == null) {
+                        return@synchronized false
+                    }
+                    
+                    try {
+                        val audio = tts!!.generate(
+                            text = chunk,
+                            sid = speakerId.coerceIn(0, NUM_SPEAKERS - 1),
+                            speed = speed
+                        )
+                        
+                        // Write samples to temp WAV file
+                        writeWavFile(audio.samples, audio.sampleRate, tempFile)
+                        true
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Generation failed for chunk $index: ${e.message}")
+                        false
+                    }
+                }
                 
                 if (success && tempFile.exists() && tempFile.length() > 44) {
                     chunkFiles.add(tempFile)
-                } else {
-                    Log.w(TAG, "Failed to synthesize chunk $index")
                 }
                 
                 processedChars += chunk.length
@@ -115,10 +150,10 @@ class TtsService(private val context: Context) {
                 return@withContext false
             }
             
-            // Concatenate all chunk files into the output file
+            // Concatenate all chunks
             concatenateWavFiles(chunkFiles, outputFile)
             
-            // Cleanup temp files
+            // Cleanup
             chunkFiles.forEach { it.delete() }
             
             true
@@ -136,25 +171,25 @@ class TtsService(private val context: Context) {
             .trim()
     }
     
-    private fun splitIntoChunks(text: String): List<String> {
+    private fun splitIntoChunks(text: String, maxSize: Int = 500): List<String> {
         val chunks = mutableListOf<String>()
         var remaining = text
         
         while (remaining.isNotEmpty()) {
-            if (remaining.length <= MAX_CHUNK_SIZE) {
+            if (remaining.length <= maxSize) {
                 chunks.add(remaining)
                 break
             }
             
-            var breakPoint = remaining.lastIndexOf(". ", MAX_CHUNK_SIZE)
-            if (breakPoint < MAX_CHUNK_SIZE / 2) {
-                breakPoint = remaining.lastIndexOf(", ", MAX_CHUNK_SIZE)
+            var breakPoint = remaining.lastIndexOf(". ", maxSize)
+            if (breakPoint < maxSize / 2) {
+                breakPoint = remaining.lastIndexOf(", ", maxSize)
             }
-            if (breakPoint < MAX_CHUNK_SIZE / 2) {
-                breakPoint = remaining.lastIndexOf(" ", MAX_CHUNK_SIZE)
+            if (breakPoint < maxSize / 2) {
+                breakPoint = remaining.lastIndexOf(" ", maxSize)
             }
-            if (breakPoint < MAX_CHUNK_SIZE / 2) {
-                breakPoint = MAX_CHUNK_SIZE
+            if (breakPoint < maxSize / 2) {
+                breakPoint = maxSize
             }
             
             chunks.add(remaining.substring(0, breakPoint + 1))
@@ -164,69 +199,47 @@ class TtsService(private val context: Context) {
         return chunks
     }
     
-    private suspend fun synthesizeChunk(text: String, outputFile: File): Boolean = 
-        withContext(Dispatchers.Main) {
-            suspendCancellableCoroutine { continuation ->
-                val resumed = AtomicBoolean(false)
-                val utteranceId = "chunk_${System.currentTimeMillis()}"
-                
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(id: String?) {}
-                    
-                    override fun onDone(id: String?) {
-                        if (id == utteranceId && resumed.compareAndSet(false, true)) {
-                            continuation.resume(true)
-                        }
-                    }
-                    
-                    override fun onError(id: String?) {
-                        if (id == utteranceId && resumed.compareAndSet(false, true)) {
-                            Log.e(TAG, "TTS error for chunk")
-                            continuation.resume(false)
-                        }
-                    }
-                    
-                    @Deprecated("Deprecated in API")
-                    override fun onError(utteranceId: String?, errorCode: Int) {
-                        if (utteranceId == utteranceId && resumed.compareAndSet(false, true)) {
-                            Log.e(TAG, "TTS error code: $errorCode")
-                            continuation.resume(false)
-                        }
-                    }
-                })
-                
-                val params = Bundle()
-                val result = tts?.synthesizeToFile(text, params, outputFile, utteranceId)
-                
-                if (result != TextToSpeech.SUCCESS) {
-                    if (resumed.compareAndSet(false, true)) {
-                        Log.e(TAG, "synthesizeToFile failed: $result")
-                        continuation.resume(false)
-                    }
-                }
-                
-                continuation.invokeOnCancellation {
-                    if (resumed.compareAndSet(false, true)) {
-                        tts?.stop()
-                    }
-                }
+    private fun writeWavFile(samples: FloatArray, sampleRate: Int, file: File) {
+        val numChannels = 1
+        val bitsPerSample = 16
+        val byteRate = sampleRate * numChannels * bitsPerSample / 8
+        val blockAlign = numChannels * bitsPerSample / 8
+        val dataSize = samples.size * 2
+        
+        FileOutputStream(file).use { fos ->
+            // WAV header
+            fos.write("RIFF".toByteArray())
+            fos.write(intToBytes(36 + dataSize))
+            fos.write("WAVE".toByteArray())
+            fos.write("fmt ".toByteArray())
+            fos.write(intToBytes(16))
+            fos.write(shortToBytes(1))
+            fos.write(shortToBytes(numChannels))
+            fos.write(intToBytes(sampleRate))
+            fos.write(intToBytes(byteRate))
+            fos.write(shortToBytes(blockAlign))
+            fos.write(shortToBytes(bitsPerSample))
+            fos.write("data".toByteArray())
+            fos.write(intToBytes(dataSize))
+            
+            // Audio data
+            for (sample in samples) {
+                val intSample = (sample * 32767).toInt().coerceIn(-32768, 32767)
+                fos.write(intSample and 0xFF)
+                fos.write((intSample shr 8) and 0xFF)
             }
         }
+    }
     
-    /**
-     * Concatenate multiple WAV files into one output file
-     * Streams data directly to avoid memory issues
-     */
     private fun concatenateWavFiles(inputFiles: List<File>, outputFile: File) {
-        // Calculate total data size
         var totalDataSize = 0
         var sampleRate = 22050
         var bitsPerSample = 16
         var numChannels = 1
         
+        // Calculate total size and read header info
         for (file in inputFiles) {
-            RandomAccessFile(file, "r").use { raf ->
-                // Read WAV header info from first file
+            java.io.RandomAccessFile(file, "r").use { raf ->
                 if (file == inputFiles.first()) {
                     raf.seek(22)
                     numChannels = (raf.readByte().toInt() and 0xFF) or ((raf.readByte().toInt() and 0xFF) shl 8)
@@ -241,18 +254,17 @@ class TtsService(private val context: Context) {
             }
         }
         
-        // Write output file with proper header
+        val byteRate = sampleRate * numChannels * bitsPerSample / 8
+        val blockAlign = numChannels * bitsPerSample / 8
+        
         FileOutputStream(outputFile).use { fos ->
             // WAV header
-            val byteRate = sampleRate * numChannels * bitsPerSample / 8
-            val blockAlign = numChannels * bitsPerSample / 8
-            
             fos.write("RIFF".toByteArray())
             fos.write(intToBytes(36 + totalDataSize))
             fos.write("WAVE".toByteArray())
             fos.write("fmt ".toByteArray())
-            fos.write(intToBytes(16)) // Subchunk1Size
-            fos.write(shortToBytes(1)) // AudioFormat (PCM)
+            fos.write(intToBytes(16))
+            fos.write(shortToBytes(1))
             fos.write(shortToBytes(numChannels))
             fos.write(intToBytes(sampleRate))
             fos.write(intToBytes(byteRate))
@@ -261,11 +273,11 @@ class TtsService(private val context: Context) {
             fos.write("data".toByteArray())
             fos.write(intToBytes(totalDataSize))
             
-            // Append audio data from each file
+            // Append audio data
             val buffer = ByteArray(8192)
             for (file in inputFiles) {
                 FileInputStream(file).use { fis ->
-                    fis.skip(44) // Skip WAV header
+                    fis.skip(44)
                     var bytesRead: Int
                     while (fis.read(buffer).also { bytesRead = it } != -1) {
                         fos.write(buffer, 0, bytesRead)
@@ -291,16 +303,27 @@ class TtsService(private val context: Context) {
         )
     }
 
-    fun getSampleRate(): Int = SAMPLE_RATE
+    fun getSampleRate(): Int = tts?.sampleRate() ?: SAMPLE_RATE
 
     fun release() {
-        tts?.stop()
-        tts?.shutdown()
-        tts = null
-        isInitialized = false
+        synchronized(this) {
+            try {
+                tts?.release()
+                tts = null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error releasing TTS: ${e.message}")
+            }
+            isInitialized = false
+        }
     }
 
-    fun isModelDownloaded(): Boolean = true
+    fun isModelDownloaded(): Boolean {
+        val modelDir = File(context.filesDir, MODEL_DIR)
+        return modelDir.exists() && 
+               File(modelDir, "vits-vctk.onnx").exists() &&
+               File(modelDir, "tokens.txt").exists() &&
+               File(modelDir, "lexicon.txt").exists()
+    }
 
-    fun getModelDir(): File = File(context.filesDir, OUTPUT_DIR)
+    fun getModelDir(): File = File(context.filesDir, MODEL_DIR)
 }
