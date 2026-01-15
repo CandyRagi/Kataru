@@ -23,11 +23,28 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -521,7 +538,7 @@ fun PermissionHandler(onPermissionGranted: @Composable () -> Unit) {
     if (hasPermission) {
         onPermissionGranted()
     } else {
-        // Premium permission request UI
+        // Premium Glassmorphic Permission Request UI
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -536,59 +553,182 @@ fun PermissionHandler(onPermissionGranted: @Composable () -> Unit) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            androidx.compose.foundation.layout.Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(32.dp)
+            // Animated content reveal
+            var contentVisible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                contentVisible = true
+            }
+            
+            // Floating icon animation
+            val infiniteTransition = rememberInfiniteTransition(label = "float")
+            val floatOffset by infiniteTransition.animateFloat(
+                initialValue = -8f,
+                targetValue = 8f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "floatOffset"
+            )
+            
+            val glowAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 0.6f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2000),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "glowAlpha"
+            )
+
+            // Card entrance animation
+            val cardAlpha by animateFloatAsState(
+                targetValue = if (contentVisible) 1f else 0f,
+                animationSpec = tween(500),
+                label = "cardAlpha"
+            )
+            
+            val cardScale by animateFloatAsState(
+                targetValue = if (contentVisible) 1f else 0.9f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "cardScale"
+            )
+            
+            // Premium glassmorphic card
+            Box(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .graphicsLayer {
+                        alpha = cardAlpha
+                        scaleX = cardScale
+                        scaleY = cardScale
+                    }
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF1A1A1F),
+                                Color(0xFF121215)
+                            )
+                        )
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.12f),
+                                Color.White.copy(alpha = 0.04f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "🎧",
-                    style = MaterialTheme.typography.displayLarge
-                )
-                
-                androidx.compose.foundation.layout.Spacer(
-                    modifier = Modifier.padding(16.dp)
-                )
-                
-                Text(
-                    text = "Permission Required",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                
-                androidx.compose.foundation.layout.Spacer(
-                    modifier = Modifier.padding(8.dp)
-                )
-                
-                Text(
-                    text = "Kataru needs access to your audio files to play audiobooks",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-                
-                androidx.compose.foundation.layout.Spacer(
-                    modifier = Modifier.padding(24.dp)
-                )
-                
-                Button(
-                    onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            launcher.launch(Manifest.permission.READ_MEDIA_AUDIO)
-                        } else {
-                            launcher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-                        }
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                androidx.compose.foundation.layout.Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
                 ) {
+                    // Animated floating icon (no glow)
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer { translationY = floatOffset }
+                    ) {
+                        // Icon container
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            AccentPrimary.copy(alpha = 0.15f),
+                                            AccentPrimary.copy(alpha = 0.05f)
+                                        )
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = AccentPrimary.copy(alpha = 0.3f),
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Rounded.FolderOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = AccentPrimary
+                            )
+                        }
+                    }
+                    
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Title with gradient-like effect
                     Text(
-                        text = "Grant Permission",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.Medium
+                        text = "Permission Required",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    // Subtitle
+                    Text(
+                        text = "Kataru needs access to your audio files to discover and play your audiobooks",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Premium styled button - using Button for reliable click handling
+                    Button(
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                launcher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                            } else {
+                                launcher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                            }
+                        },
+                        modifier = Modifier
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentPrimary
+                        )
+                    ) {
+                        androidx.compose.foundation.layout.Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Rounded.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                            Text(
+                                text = "Grant Access",
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                    
+                    // Subtle hint text
+                    Text(
+                        text = "We only access audio files",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted,
+                        textAlign = TextAlign.Center
                     )
                 }
             }

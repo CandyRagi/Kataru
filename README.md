@@ -1,4 +1,4 @@
-# Kataru 🎧
+# Kataru 
 
 A slick audiobook player for Android. Built because I got tired of clunky apps that look like they're from 2015.
 
@@ -43,4 +43,6 @@ A slick audiobook player for Android. Built because I got tired of clunky apps t
 
 ---
 
-Made by someone who just wanted a nice audiobook player.
+Made by someone who just wanted a nice audiobook player lol.
+
+
