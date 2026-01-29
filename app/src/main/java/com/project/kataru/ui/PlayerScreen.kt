@@ -711,6 +711,9 @@ private fun PlayPauseButton(
                             MaterialTheme.colorScheme.primary,
                             GradientPurpleEnd
                         )
+
+
+
                     ),
                     shape = CircleShape
                 )

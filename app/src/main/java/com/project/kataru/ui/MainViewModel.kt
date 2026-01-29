@@ -249,6 +249,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun pausePlayback() {
+        controller?.pause()
+    }
+
     fun seekTo(position: Long) {
         controller?.seekTo(position)
         _currentPosition.value = position

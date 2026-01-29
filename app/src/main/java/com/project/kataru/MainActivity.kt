@@ -504,6 +504,16 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         viewModel.saveCurrentProgress()
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Stop audio when app is closed (swiped away from recents)
+        // Widget can still control playback through PlaybackService
+        if (isFinishing) {
+            viewModel.saveCurrentProgress()
+            viewModel.pausePlayback()
+        }
+    }
 }
 
 @Composable
